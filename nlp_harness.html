@@ -1,0 +1,26 @@
+<html>
+<body>
+	<script type="text/javascript" src="nlp.js"></script>
+	<script type="text/javascript">
+		var doc1 = new NLP.Document("the quick brown fox jumped, over the lazy dog.");
+		var doc2 = new NLP.Document("the fox is pretty quick when it runs away.");
+		var doc3 = new NLP.Document("the I am so different");
+		var doc4 = new NLP.Document("this is a song about mary");
+		var doc5 = new NLP.Document("hello my name is james and i am 26 years old");
+
+		NLP.Corpus.addDocument(doc1);
+		NLP.Corpus.addDocument(doc2);
+		NLP.Corpus.addDocument(doc3);
+		NLP.Corpus.addDocument(doc4);
+		NLP.Corpus.addDocument(doc5);
+
+		/*console.log(doc1.tfidfs());
+		console.log(doc2.tfidfs());
+		console.log(doc3.tfidfs());*/
+		console.log(NLP.Corpus.docSimilarity(doc1, doc2));
+		console.log(NLP.Corpus.docSimilarity(doc1, doc3));
+		console.log(NLP.Corpus.docSimilarity(doc1, doc4));
+		console.log(NLP.Corpus.docSimilarity(doc1, doc5));
+	</script>
+</body>
+</html>
