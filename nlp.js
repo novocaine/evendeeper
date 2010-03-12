@@ -18,23 +18,26 @@ NLP.Document = function(text) {
 			if (_wordCounts === null) {	
 				_wordCounts = {};					
 				// split document into separate words
-				var words = _text.split(" ");
+				var words = _text.split(/\s/);
 				
 				// save number of words
 				_numWords = words.length;
 				
 				for (var i=0; i < words.length; ++i) {
 					var word = words[i];
-					// remove trailing commas and full-stops
-					word = word.replace(/\.|\,$/, "");					
 					// convert everything to uppercase
 					word = word.toUpperCase();
+					// remove trailing and leading non-alphanumeric chars
+					word = word.replace(/[^A-Z0-9]+$/, "");
+					word = word.replace(/^[^A-Z0-9]+/, "");
 					
-					if (!_wordCounts[word]) {
-						_wordCounts[word] = 1;
-					} else {
-						_wordCounts[word] = _wordCounts[word] + 1;
-					}
+					if (word.length != 0) {					
+  					if (!_wordCounts[word]) {
+  						_wordCounts[word] = 1;
+  					} else {
+  						_wordCounts[word] = _wordCounts[word] + 1;
+  					}
+  				}
 				}
 			}
 			
