@@ -10,7 +10,41 @@ NLP.Document = function(text) {
 	var _wordCounts = null;
 	var _numWords = null;
 	var _tfidfs = null;
-				
+	var _accentRegexes = null;
+	var __accentReplacements = null;			
+	
+	function removeAccents(r) {
+	  if (_accentRegexes == null) {
+	    _accentRegexes = [];
+	    _accentRegexes.push(new RegExp("[àáâãäå]", 'g'));
+	    _accentRegexes.push(new RegExp("æ", 'g'));
+	    _accentRegexes.push(new RegExp("ç", 'g'));
+	    _accentRegexes.push(new RegExp("[èéêë]", 'g'));
+	    _accentRegexes.push(new RegExp("[ìíîï]", 'g'));
+	    _accentRegexes.push(new RegExp("ñ", 'g'));
+	    _accentRegexes.push(new RegExp("òóôõö", 'g'));
+	    _accentRegexes.push(new RegExp("ùúûü", 'g'));
+	    _accentRegexes.push(new RegExp("ýÿ", 'g'));
+	    
+	    _accentReplacements = [];
+	    _accentReplacements.push('a');
+	    _accentReplacements.push('ae');
+	    _accentReplacements.push('c');
+	    _accentReplacements.push('e');
+	    _accentReplacements.push('i');    
+	    _accentReplacements.push('n');
+	    _accentReplacements.push('o');
+	    _accentReplacements.push('u');
+	    _accentReplacements.push('y');	    
+	  }
+	  
+	  for (i in _accentRegexes) {
+      r = r.replace(_accentRegexes[i], _accentReplacements[i]);
+    }
+    
+    return r;
+	}
+	
 	return {
 		text: function() { return _text; },
 		
@@ -25,11 +59,12 @@ NLP.Document = function(text) {
 				
 				for (var i=0; i < words.length; ++i) {
 					var word = words[i];
-					// convert everything to uppercase
-					word = word.toUpperCase();
+					word = word.toLowerCase();
 					// remove trailing and leading non-alphanumeric chars
-					word = word.replace(/[^A-Z0-9]+$/, "");
-					word = word.replace(/^[^A-Z0-9]+/, "");
+					word = word.replace(/[^a-z0-9]+$/, "");
+					word = word.replace(/^[^a-z0-9]+/, "");
+					// convert accents to ascii chars
+					word = removeAccents(word);
 					
 					if (word.length != 0) {					
   					if (!_wordCounts[word]) {
@@ -64,7 +99,7 @@ NLP.Document = function(text) {
 				
 				for (var term in termFrequencies) {				
 					_tfidfs[term] = termFrequencies[term] * NLP.Corpus.idf(term);
-				}
+				}				
 			}
 			
 			return _tfidfs;
