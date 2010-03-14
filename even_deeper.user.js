@@ -17,6 +17,11 @@ EvenDeeper.debug = function(msg) {
   }
 };
 
+EvenDeeper.errorMsg = function(msg) {
+  alert("EvenDeeper: " + msg);
+};
+
+
 EvenDeeper.AtomEntry = function(xml) {
   var _xml = $(xml);
   //console.log(_xml);
@@ -155,7 +160,7 @@ EvenDeeper.GoogleReader = function() {
   var _articles = [];
   var _grLabel = 'foreign%20policy';
   var _grItemsPerGet = 20;
-  var _grMaxTotalItems = 500;
+  var _grMaxTotalItems = 20;
   var _grItemCount = 0;
   
   // used for forming reader urls
@@ -178,8 +183,6 @@ EvenDeeper.GoogleReader = function() {
           return;
         }
         
-        EvenDeeper.debug("google reader login replied with " + response.responseText);
-                                        
         googleLogin['SID'] = response.responseText.match(/SID=(.*)/)[0];
         
         EvenDeeper.debug("logged into Google Reader with sid " + googleLogin['SID']);
@@ -189,9 +192,27 @@ EvenDeeper.GoogleReader = function() {
     });
   };
   
-  function processReaderItems(xml_response) {
-      
+  function grGetItemsXHR(continuation) {
+    var url = 'http://www.google.com/reader/atom/user/-/label/' + _grLabel + "?n=" + _grItemsPerGet;
+    if (continuation) {
+      url += "&c=" + continuation;
+    }
+    
+    EvenDeeper.debug("getting items from " + url + " with sid " + googleLogin['SID']);
         
+    GM_xmlhttpRequest({
+      method: 'GET', 
+      url: url,
+      headers: { 
+        'Accept': '*/*',
+        'Cookie': googleLogin['SID'] + ';',
+        'User-Agent': 'EvenDeeper_0.1'
+      },
+      onload: grGetItemsCallback
+    });
+  };
+  
+  function processReaderItems(xml_response) {      
     // add all documents in response to corpus
     xml_response.find("entry").each(function() {                               
       // create and store article
@@ -206,23 +227,7 @@ EvenDeeper.GoogleReader = function() {
     // make feeds
     // xml_response.find("feed")
   };
-  
-  function grGetItemsXHR(continuation) {
-    var url = 'http://www.google.com/reader/atom/user/-/label/' + _grLabel + "?n=" + _grItemsPerGet;
-    if (continuation) {
-      url += "&c=" + continuation;
-    }
     
-    EvenDeeper.debug("getting items from " + url + " with sid " + googleLogin['SID']);
-        
-    GM_xmlhttpRequest({
-      method: 'GET', 
-      url: url,
-      headers: { 'Cookie': 'SID=' + googleLogin['SID'] + ';' },
-      onload: grGetItemsCallback
-    });
-  };
-  
   function grGetItems() {
     // we can't process all the items at once as that uses a lot of memory and firefox shits itself,
     // so we process the items in batches of 20 at a time, using the continuation parameter to 
@@ -234,7 +239,11 @@ EvenDeeper.GoogleReader = function() {
     // convert responseText into a dom tree we can parse
     var xml_response = $(response.responseText);
 
-    EvenDeeper.debug("got items callback with response " + response.responseText);  
+    // verify response
+    if (xml_response[0].tagName != "FEED") {
+      EvenDeeper.errorMsg("Google Reader responded with something indecipherable.");
+      return;
+    }
       
     // getting the continuation is a pain in the ass because jquery doesn't support namespaces (apparently)
     var continuation_tags = xml_response.children().filter(function() { return this.tagName == "GR:CONTINUATION"; });
@@ -269,11 +278,7 @@ EvenDeeper.GoogleReader = function() {
 EvenDeeper.Main = function() {
   var _currentDoc = null;
   var _currentArticle = null;
-  
-  function errorMsg(msg) {
-    alert("EvenDeeper: " + msg);
-  }
-  
+    
   function grGotAllItems() { 
     var articles = EvenDeeper.GoogleReader.articles();
             
