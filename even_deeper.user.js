@@ -9,6 +9,14 @@
 
 var EvenDeeper = {};
 
+EvenDeeper.debugging_enabled = true;
+
+EvenDeeper.debug = function(msg) { 
+  if (EvenDeeper.debugging_enabled) {
+    console.log(msg); 
+  }
+};
+
 EvenDeeper.AtomEntry = function(xml) {
   var _xml = $(xml);
   //console.log(_xml);
@@ -82,7 +90,7 @@ EvenDeeper.PageTypes = {};
 
 EvenDeeper.PageTypes.TestHarness = function() {
   return { 
-    displayResults: function(articles) {
+    displayResults: function(articles) {      
       for (i in articles) {
         console.log(articles[i].title());
         console.log(articles[i].similarityToCurrentArticle);
@@ -142,7 +150,7 @@ if (document.location.href.match(/guardian.co.uk/) && $("#article-wrapper").leng
   console.log("initialized as harness");
 }
 
-EvenDeeper.Main = function() {
+EvenDeeper.GoogleReader = function() {
   var googleLogin = {};
   var _articles = [];
   var _grLabel = 'foreign%20policy';
@@ -150,29 +158,14 @@ EvenDeeper.Main = function() {
   var _grMaxTotalItems = 500;
   var _grItemCount = 0;
   
-  var _currentDoc = null;
-  var _currentArticle = null;
-  
   // used for forming reader urls
   var user = "iteration";
   
   // used for google login process
   var loginEmail = 'iteration@gmail.com';
   var loginPassword = 'gong3891';
-  
-  function isArticlePage() {
-    return (document.getElementById("article-wrapper") != null);
-  };
-  
-  function getGoogleLogin() {
-    return 'http://evendeeper.deckardsoftware.com/api/?url=' + window.location.href;
-  }
-  
-  function errorMsg(msg) {
-    alert("EvenDeeper: " + msg);
-  }
-  
-  function grLogin() {    
+
+  function grLogin(callback) {    
     GM_xmlhttpRequest({
       method: 'POST',
       //url: 'http://www.postbin.org/14shhtt',
@@ -183,17 +176,22 @@ EvenDeeper.Main = function() {
         if (response.status != 200) {
           errorMsg("couldn't log in to google reader");
           return;
-        } 
-                        
+        }
+        
+        EvenDeeper.debug("google reader login replied with " + response.responseText);
+                                        
         googleLogin['SID'] = response.responseText.match(/SID=(.*)/)[0];
         
+        EvenDeeper.debug("logged into Google Reader with sid " + googleLogin['SID']);
+        
+        callback();
       }
     });
   };
   
   function processReaderItems(xml_response) {
-    //console.log(xml_response);
-    
+      
+        
     // add all documents in response to corpus
     xml_response.find("entry").each(function() {                               
       // create and store article
@@ -204,10 +202,10 @@ EvenDeeper.Main = function() {
       var doc = new NLP.Document(article.body());
       NLP.Corpus.addDocument(doc);                    
     });    
-    
+            
     // make feeds
     // xml_response.find("feed")
-  }
+  };
   
   function grGetItemsXHR(continuation) {
     var url = 'http://www.google.com/reader/atom/user/-/label/' + _grLabel + "?n=" + _grItemsPerGet;
@@ -215,7 +213,7 @@ EvenDeeper.Main = function() {
       url += "&c=" + continuation;
     }
     
-    console.log(url);
+    EvenDeeper.debug("getting items from " + url + " with sid " + googleLogin['SID']);
         
     GM_xmlhttpRequest({
       method: 'GET', 
@@ -223,19 +221,21 @@ EvenDeeper.Main = function() {
       headers: { 'Cookie': 'SID=' + googleLogin['SID'] + ';' },
       onload: grGetItemsCallback
     });
-  }
+  };
   
   function grGetItems() {
     // we can't process all the items at once as that uses a lot of memory and firefox shits itself,
     // so we process the items in batches of 20 at a time, using the continuation parameter to 
     // continually request sets.        
     grGetItemsXHR(null);
-  }
+  };
   
-  function grGetItemsCallback(response) {
-  
+  function grGetItemsCallback(response) {    
     // convert responseText into a dom tree we can parse
     var xml_response = $(response.responseText);
+
+    EvenDeeper.debug("got items callback with response " + response.responseText);  
+      
     // getting the continuation is a pain in the ass because jquery doesn't support namespaces (apparently)
     var continuation_tags = xml_response.children().filter(function() { return this.tagName == "GR:CONTINUATION"; });
     
@@ -248,37 +248,57 @@ EvenDeeper.Main = function() {
       if (_grItemCount < _grMaxTotalItems) {
         grGetItemsXHR(continuation);
       } else {
-        grGotAllItems();
+        _grGotAllItemsCallback();
       }
     } else {
-      grGotAllItems();
+      processReaderItems(xml_response);
+      _grGotAllItemsCallback();
     }
+  };
+    
+  return {
+    loadItems: function(callback) {
+      _grGotAllItemsCallback = callback;
+      grLogin(function() { grGetItems(); });
+    },
+    
+    articles: function(articles) { return _articles; }
+  };
+}();
+
+EvenDeeper.Main = function() {
+  var _currentDoc = null;
+  var _currentArticle = null;
+  
+  function errorMsg(msg) {
+    alert("EvenDeeper: " + msg);
   }
   
-  function grGotAllItems() {    
+  function grGotAllItems() { 
+    var articles = EvenDeeper.GoogleReader.articles();
+            
     // compare reader-sourced articles to current article, stashing similarity in the article object
-    $(_articles).each(function() {
+    $(articles).each(function() {
       this.similarityToCurrentArticle = NLP.Corpus.docSimilarity(_currentDoc, new NLP.Document(this.body()));
     });                
             
-    _articles.sort(function(article_a, article_b) {
+    articles.sort(function(article_a, article_b) {
       return (article_b.similarityToCurrentArticle - article_a.similarityToCurrentArticle);
     });      
-    
-    EvenDeeper.CurrentPage.displayResults(_articles);    
+            
+    // show results on current page
+    EvenDeeper.CurrentPage.displayResults(articles);    
   }
-      
+        
   return {
-    init: function() {      
-      
+    init: function() {            
       // make an article from the current article
       _currentArticle = EvenDeeper.CurrentPage.createArticleFromCurrentPage();      
       _currentDoc = new NLP.Document(_currentArticle.body());
-      NLP.Corpus.addDocument(_currentDoc);
-                  
-      grLogin();
-                  
-      grGetItems();            
+      NLP.Corpus.addDocument(_currentDoc);    
+      
+      // get new articles from google reader
+      EvenDeeper.GoogleReader.loadItems(grGotAllItems);
     }
   };
 }();
