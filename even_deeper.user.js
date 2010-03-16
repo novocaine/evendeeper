@@ -9,6 +9,7 @@
 
 var EvenDeeper = {};
 
+EvenDeeper.userAgent = 'EvenDeeper_0.1';
 EvenDeeper.debugging_enabled = true;
 
 EvenDeeper.debug = function(msg) { 
@@ -62,12 +63,56 @@ EvenDeeper.Article = function(source, title, body, url) {
   var _body = body;
   var _url = url;
   var _source = source;
+  var _updatedBodyCallback = null;
   
+  // given an article with an insigificant body, visits its url to get the full article   
+  function updateBodyFromSource() {
+    EvenDeeper.debug("updating body of " + url);
+    
+    GM_xmlhttpRequest({
+      method: 'GET', 
+      url: _url,
+      headers: { 
+        'User-Agent': EvenDeeper.userAgent
+      },        
+      onload: yankPage_callback
+    });
+  };
+  
+  function yankPage_callback(response) {
+    var page = $(response.responseText);
+    var title = page.find("head title").text();
+    var body = null;
+
+    // generate body text 
+    // strategy is to look for the first node containing > 1000 chars worth of text
+    page.find("p").each(function(node) {
+      var node = $(this);
+      
+      if (node.parent().text().length > 500) {        
+        _body = node.parent().children("p").text();        
+        //EvenDeeper.debug(_body);
+        return false;
+      }
+    });        
+    
+    _updatedBodyCallback();
+  };
+    
   return {
     title: function() { return _title; },
     body: function() { return _body; },
     url: function() { return _url; },
-    source: function() { return _source; }
+    source: function() { return _source; },
+
+    updateBodyFromSourceIfNecessary: function(callback) {      
+      if (_body.length < 1000) {
+        _updatedBodyCallback = callback;
+        updateBodyFromSource();
+      } else {
+        callback();
+      }
+    }
   };
 };
 
@@ -87,7 +132,7 @@ EvenDeeper.ArticleFactory = function() {
       
       var article = new EvenDeeper.Article(atom.feed_title(), title, body, atom.url());
       return article;
-    }
+    }    
   };
 }();
 
@@ -158,9 +203,9 @@ if (document.location.href.match(/guardian.co.uk/) && $("#article-wrapper").leng
 EvenDeeper.GoogleReader = function() {
   var googleLogin = {};
   var _articles = [];
-  var _grLabel = 'foreign%20policy';
+  var _grLabel = 'evendeeper';
   var _grItemsPerGet = 20;
-  var _grMaxTotalItems = 20;
+  var _grMaxTotalItems = 500;
   var _grItemCount = 0;
   
   // used for forming reader urls
@@ -176,7 +221,7 @@ EvenDeeper.GoogleReader = function() {
       //url: 'http://www.postbin.org/14shhtt',
       url: "https://www.google.com/accounts/ClientLogin",
       headers: { 'Content-type': 'application/x-www-form-urlencoded' } ,
-      data: 'accountType=HOSTED_OR_GOOGLE&service=reader&Email= ' + loginEmail + '&Passwd=' + loginPassword + '&source=EvenDeeper_0.1',      
+      data: 'accountType=HOSTED_OR_GOOGLE&service=reader&Email= ' + loginEmail + '&Passwd=' + loginPassword + '&source=' + EvenDeeper.userAgent,      
       onload: function(response) {                
         if (response.status != 200) {
           errorMsg("couldn't log in to google reader");
@@ -206,7 +251,7 @@ EvenDeeper.GoogleReader = function() {
       headers: { 
         'Accept': '*/*',
         'Cookie': googleLogin['SID'] + ';',
-        'User-Agent': 'EvenDeeper_0.1'
+        'User-Agent': EvenDeeper.userAgent
       },
       onload: grGetItemsCallback
     });
@@ -250,6 +295,9 @@ EvenDeeper.GoogleReader = function() {
     
     if (continuation_tags.length != 0) {
       var continuation = continuation_tags[0].innerHTML;
+      
+      EvenDeeper.debug(continuation);
+      
       processReaderItems(xml_response);
     
       _grItemCount += _grItemsPerGet;
@@ -275,13 +323,39 @@ EvenDeeper.GoogleReader = function() {
   };
 }();
 
+EvenDeeper.ArticleBodyUpdater = function() {
+  var _index = 0;
+  var _articles;
+  var _doneCallback;
+
+  function updatedBodyCallback() {
+    ++_index;
+    
+    if (_index < _articles.length) {
+      _articles[_index].updateBodyFromSourceIfNecessary(updatedBodyCallback); 
+    } else {
+      _doneCallback(_articles);
+    }
+  };
+    
+  return {
+    updateArticles: function(articles, doneCallback) {            
+      if (articles.length > 0) {
+        _articles = articles;
+        _doneCallback = doneCallback;
+        _articles[0].updateBodyFromSourceIfNecessary(updatedBodyCallback); 
+      } else {
+        doneCallback(articles);
+      }
+    }
+  };
+}();
+
 EvenDeeper.Main = function() {
   var _currentDoc = null;
   var _currentArticle = null;
     
-  function grGotAllItems() { 
-    var articles = EvenDeeper.GoogleReader.articles();
-            
+  function updatedArticleBodies(articles) {
     // compare reader-sourced articles to current article, stashing similarity in the article object
     $(articles).each(function() {
       this.similarityToCurrentArticle = NLP.Corpus.docSimilarity(_currentDoc, new NLP.Document(this.body()));
@@ -292,7 +366,15 @@ EvenDeeper.Main = function() {
     });      
             
     // show results on current page
-    EvenDeeper.CurrentPage.displayResults(articles);    
+    EvenDeeper.CurrentPage.displayResults(articles);
+  }  
+  
+  function grGotAllItems() { 
+    EvenDeeper.debug("got items");
+    
+    var articles = EvenDeeper.GoogleReader.articles();
+    // update bodies from articles sources
+    EvenDeeper.ArticleBodyUpdater.updateArticles(articles, updatedArticleBodies);
   }
         
   return {
@@ -301,7 +383,7 @@ EvenDeeper.Main = function() {
       _currentArticle = EvenDeeper.CurrentPage.createArticleFromCurrentPage();      
       _currentDoc = new NLP.Document(_currentArticle.body());
       NLP.Corpus.addDocument(_currentDoc);    
-      
+                  
       // get new articles from google reader
       EvenDeeper.GoogleReader.loadItems(grGotAllItems);
     }
