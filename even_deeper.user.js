@@ -5,6 +5,7 @@
 // @include        file:///Users/jsalter/Documents/dev/evendeeper/nlp_harness.html
 // @require        http://code.jquery.com/jquery-1.3.2.min.js
 // @require        nlp.js
+// @require        login.js
 // ==/UserScript==
 
 var EvenDeeper = {};
@@ -80,21 +81,24 @@ EvenDeeper.Article = function(source, title, body, url) {
   };
   
   function yankPage_callback(response) {
-    var page = $(response.responseText);
-    var title = page.find("head title").text();
-    var body = null;
+    if (response.status == 200) {
+      var page = $(response.responseText);
+      var title = page.find("head title").text();
+      var body = null;
 
-    // generate body text 
-    // strategy is to look for the first node containing > 1000 chars worth of text
-    page.find("p").each(function(node) {
-      var node = $(this);
-      
-      if (node.parent().text().length > 500) {        
-        _body = node.parent().children("p").text();        
-        //EvenDeeper.debug(_body);
-        return false;
-      }
-    });        
+      // generate body text 
+      // strategy is to look for the first node containing > 1000 chars worth of text
+      page.find("p").each(function(index, n) {      
+        var node = $(n);
+        if (node.parent().text().length > 500) {        
+          _body = node.parent().children("p").text();        
+          //EvenDeeper.debug(_body);
+          return false;
+        }
+      });        
+    } else {
+      EvenDeeper.debug("got response code " + response.status + ", not updating body");
+    }
     
     _updatedBodyCallback();
   };
@@ -144,6 +148,7 @@ EvenDeeper.PageTypes.TestHarness = function() {
       for (i in articles) {
         console.log(articles[i].title());
         console.log(articles[i].similarityToCurrentArticle);
+        console.log(articles[i].body());
       }
     },
     
@@ -203,25 +208,28 @@ if (document.location.href.match(/guardian.co.uk/) && $("#article-wrapper").leng
 EvenDeeper.GoogleReader = function() {
   var googleLogin = {};
   var _articles = [];
-  var _grLabel = 'evendeeper';
+  var _grLabel = 'foreign%20policy';
   var _grItemsPerGet = 20;
-  var _grMaxTotalItems = 500;
+  var _grMaxTotalItems = 20;
   var _grItemCount = 0;
+  var _loginEmail = null;
+  var _loginPassword = null;
   
-  // used for forming reader urls
-  var user = "iteration";
-  
-  // used for google login process
-  var loginEmail = 'iteration@gmail.com';
-  var loginPassword = 'gong3891';
-
   function grLogin(callback) {    
+    _loginEmail = GM_getValue("reader_login");
+    _loginPassword = GM_getValue("reader_password");
+    
+    if (_loginEmail === null || _loginPassword === null) {
+      alert("Couldn't find login details in user prefs");
+      return;
+    }
+    
     GM_xmlhttpRequest({
       method: 'POST',
       //url: 'http://www.postbin.org/14shhtt',
       url: "https://www.google.com/accounts/ClientLogin",
       headers: { 'Content-type': 'application/x-www-form-urlencoded' } ,
-      data: 'accountType=HOSTED_OR_GOOGLE&service=reader&Email= ' + loginEmail + '&Passwd=' + loginPassword + '&source=' + EvenDeeper.userAgent,      
+      data: 'accountType=HOSTED_OR_GOOGLE&service=reader&Email= ' + _loginEmail + '&Passwd=' + _loginPassword + '&source=' + EvenDeeper.userAgent,      
       onload: function(response) {                
         if (response.status != 200) {
           errorMsg("couldn't log in to google reader");
@@ -262,11 +270,13 @@ EvenDeeper.GoogleReader = function() {
     xml_response.find("entry").each(function() {                               
       // create and store article
       var article = EvenDeeper.ArticleFactory.createArticleFromAtom(new EvenDeeper.AtomEntry($(this)));
-      _articles.push(article);
       
-      // create document from article and add to corpus
-      var doc = new NLP.Document(article.body());
-      NLP.Corpus.addDocument(doc);                    
+      if (_articles.length < _grMaxTotalItems) {
+        _articles.push(article);      
+        return true;
+      } else {
+        return false;
+      }
     });    
             
     // make feeds
@@ -315,11 +325,16 @@ EvenDeeper.GoogleReader = function() {
     
   return {
     loadItems: function(callback) {
-      _grGotAllItemsCallback = callback;
+      _grGotAllItemsCallback = callback;      
       grLogin(function() { grGetItems(); });
     },
     
-    articles: function(articles) { return _articles; }
+    articles: function(articles) { return _articles; },
+    
+    initLogin: function(reader_login, reader_password) {    
+      _loginEmail = reader_login;
+      _loginPassword = reader_password;
+    }
   };
 }();
 
@@ -354,11 +369,29 @@ EvenDeeper.ArticleBodyUpdater = function() {
 EvenDeeper.Main = function() {
   var _currentDoc = null;
   var _currentArticle = null;
+  var _max_nlp_considered_chars = 1000;
+  
+  function nlpDocFromArticle(article) {
+    // we truncate the document because usually the key bits of the article are at the top
+    // and this reduces the bias towards large documents
+    //return new NLP.Document(article.body().substring(0, _max_nlp_considered_chars));
+    return new NLP.Document(article.body());
+  }
+  
+  function updatedArticleBodies(articles) {            
+    $.each(articles, function() {
+      // create document from article and add to corpus; stash doc in article
+      this.nlpdoc = nlpDocFromArticle(this);
+      NLP.Corpus.addDocument(this.nlpdoc);
+    });    
     
-  function updatedArticleBodies(articles) {
+    NLP.Debug.dumpUnionTerms();
+    NLP.Debug.dumpDocumentTfIdf(_currentDoc);
+    
     // compare reader-sourced articles to current article, stashing similarity in the article object
-    $(articles).each(function() {
-      this.similarityToCurrentArticle = NLP.Corpus.docSimilarity(_currentDoc, new NLP.Document(this.body()));
+    $.each(articles, function() {
+      NLP.Debug.dumpDocumentTfIdf(this.nlpdoc);
+      this.similarityToCurrentArticle = NLP.Corpus.docSimilarity(_currentDoc, this.nlpdoc);
     });                
             
     articles.sort(function(article_a, article_b) {
@@ -376,14 +409,14 @@ EvenDeeper.Main = function() {
     // update bodies from articles sources
     EvenDeeper.ArticleBodyUpdater.updateArticles(articles, updatedArticleBodies);
   }
-        
+          
   return {
     init: function() {            
       // make an article from the current article
       _currentArticle = EvenDeeper.CurrentPage.createArticleFromCurrentPage();      
-      _currentDoc = new NLP.Document(_currentArticle.body());
+      _currentDoc = nlpDocFromArticle(_currentArticle);
       NLP.Corpus.addDocument(_currentDoc);    
-                  
+      
       // get new articles from google reader
       EvenDeeper.GoogleReader.loadItems(grGotAllItems);
     }
@@ -391,7 +424,7 @@ EvenDeeper.Main = function() {
 }();
 
 (function() {
-    EvenDeeper.Main.init();
+  EvenDeeper.Main.init();
 }());
 
 

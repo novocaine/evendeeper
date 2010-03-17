@@ -11,8 +11,15 @@ NLP.Document = function(text) {
 	var _numWords = null;
 	var _tfidfs = null;
 	var _accentRegexes = null;
-	var __accentReplacements = null;			
-	
+	var _accentReplacements = null;			
+	var _stopWords = [ 'a', 'also', 'an', 'and', 'as', 'at', 'be', 'but', 'by', 
+                     'can', 'could', 'do', 'for', 'from', 'go', 'have', 'he', 'her',
+                     'here', 'his', 'how', 'i', 'if', 'in', 'into', 'it', 'its',
+                     'my', 'of', 'on', 'or', 'our', 'say', 'she', 'that', 'the', 
+                     'their', 'there', 'therefore', 'they', 'this', 'these', 'those',
+                     'through', 'to', 'until', 'we', 'what', 'when', 'where', 'which',
+                     'while', 'who', 'with', 'would', 'you', 'your'];
+                     
 	function removeAccents(r) {
 	  if (_accentRegexes == null) {
 	    _accentRegexes = [];
@@ -57,23 +64,29 @@ NLP.Document = function(text) {
 				// save number of words
 				_numWords = words.length;
 				
-				for (var i=0; i < words.length; ++i) {
-					var word = words[i];
+				var i = 0;
+				
+				$.each(words, function(i, word) {
 					word = word.toLowerCase();
 					// remove trailing and leading non-alphanumeric chars
 					word = word.replace(/[^a-z0-9]+$/, "");
 					word = word.replace(/^[^a-z0-9]+/, "");
 					// convert accents to ascii chars
 					word = removeAccents(word);
-					
+
 					if (word.length != 0) {					
   					if (!_wordCounts[word]) {
   						_wordCounts[word] = 1;
   					} else {
   						_wordCounts[word] = _wordCounts[word] + 1;
   					}
-  				}
-				}
+  				}  				
+				});
+															
+				// kill stop words
+				$.each(_stopWords, function(i, stopWord) {
+  			  delete _wordCounts[stopWord];
+  		  });							  		    		  
 			}
 			
 			return _wordCounts;
@@ -99,59 +112,115 @@ NLP.Document = function(text) {
 				
 				for (var term in termFrequencies) {				
 					_tfidfs[term] = termFrequencies[term] * NLP.Corpus.idf(term);
-				}				
+				}								
 			}
 			
 			return _tfidfs;
+		},
+		
+		clearTfIdfs: function() {
+		  _tfidfs = null;
 		}
 	};
 };
 
-NLP.Corpus = function() {
+NLP.Corpus = function() {  
 	var _documents = [];
+	var _unionTerms = null;
 	
 	return {		
 		// inverse document frequency
 		idf: function(term) {
 			var count = 0;
 			// find num docs where the term appears
-			for (var doc in _documents) {				
-				if (_documents[doc].wordCounts()[term]) { ++count; }					
+			for (var i in _documents) {				
+				if (_documents[i].wordCounts()[term]) { ++count; }					
 			}
 			
-			return Math.log(_documents.length / (count + 1));
+			if (count == 0) { 
+			  console.log("warning: idf is 0 for term " + term);
+			  return 0;
+		  }
+			
+			return Math.log(_documents.length / count);
 		},
-		
+						
+		unionTerms: function() {
+		  if (_unionTerms === null) {
+		    _unionTerms = {};
+		    for (var i in _documents) {
+		      for (var term in _documents[i].tfidfs()) {
+		        _unionTerms[term] = 0;
+		      }
+		    }		    
+		  }
+		  
+		  return _unionTerms;
+		},	
+    										
 		docSimilarity: function(doc1, doc2) {
-			// form union of terms in both doc1 and doc2
-			var unionTerms = {};
 			var tfidfs1 = doc1.tfidfs();
 			var tfidfs2 = doc2.tfidfs();
-			
-			for (var term1 in tfidfs1) { unionTerms[term1] = 0; }
-			for (var term2 in tfidfs2) { unionTerms[term2] = 0; }
-			
+						
 			var dotproduct = 0;
 			var mag1 = 0;
 			var mag2 = 0;						
 			
+			var unionTerms = NLP.Corpus.unionTerms();
+			
 			for (var term in unionTerms) {
 				var delta = 0;
+				
 				var tfidf1 = tfidfs1[term] ? tfidfs1[term] : delta;				
-				var tfidf2 = tfidfs2[term] ? tfidfs2[term] : delta;				
-			
-				dotproduct += tfidf1 * tfidf2;
-				mag1 += (tfidf1 * tfidf1);
-								
+				var tfidf2 = tfidfs2[term] ? tfidfs2[term] : delta;    
+						
+				dotproduct += (tfidf1 * tfidf2);
+				mag1 += (tfidf1 * tfidf1);								
 				mag2 += (tfidf2 * tfidf2);
+			}
+			
+			if (mag1 == 0 || mag2 == 0) {
+			  NLP.Debug.msg('mag1 or mag2 is zero');
+			  return 0;
 			}
 			
 			mag1 = Math.sqrt(mag1);
 			mag2 = Math.sqrt(mag2);						
 			
-			return dotproduct / (mag1 * mag2);
+			return dotproduct / (mag1 * mag2);			
 		},
 		
-		addDocument: function(document) {	_documents.push(document); }
+		addDocument: function(document) {	
+		  _documents.push(document);
+		  
+		  // discard cached stuff
+		  _unionTerms = null;
+		  
+		  $.each(_documents, function(index, doc) {
+		    doc.clearTfIdfs();
+		  });
+		}
 	};
+}();
+
+NLP.Debug = function() {
+  return {
+    dumpUnionTerms: function() {
+  	  for (var term in NLP.Corpus.unionTerms()) {	    
+  	    $(document.body).append(term + "<br />");
+  	  }
+  	},
+  	
+  	dumpDocumentTfIdf: function(doc) {
+  	  var tfidfs = doc.tfidfs();
+  	  
+  	  for (var term in tfidfs) {
+  	    $(document.body).append(term + ", idf: " + NLP.Corpus.idf(term) + " tfidf: " + tfidfs[term] + "<br />");
+  	  }
+  	},
+  	
+  	msg: function(msg) {
+  	  console.log(msg);  	  
+  	}
+  };
 }();
