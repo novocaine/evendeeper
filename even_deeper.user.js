@@ -149,7 +149,7 @@ EvenDeeper.PageTypes.TestHarness = function() {
       for (i in articles) {
         console.log(articles[i].title());
         console.log(articles[i].similarityToCurrentArticle);
-        /*console.log(articles[i].body());*/
+        //console.log(articles[i].body());
       }
     },
     

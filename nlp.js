@@ -76,7 +76,7 @@ NLP.Document = function(text) {
 					word = NLP.AccentRemover.removeAccents(word);
 
 					if (word.length != 0) {					
-  					if (!_wordCounts[word]) {
+  					if (!_wordCounts.hasOwnProperty(word)) {
   						_wordCounts[word] = 1;
   					} else {
   						_wordCounts[word] = _wordCounts[word] + 1;
@@ -89,7 +89,7 @@ NLP.Document = function(text) {
 																			
 				// kill stop words
 				$.each(_stopWords, function(i, stopWord) {
-          if (stopWord in _wordCounts) {
+          if (_wordCounts.hasOwnProperty(stopWord)) {
             delete _wordCounts[stopWord];
             --_numWords;
           }
@@ -104,8 +104,12 @@ NLP.Document = function(text) {
 		    var wordCounts = this.wordCounts();
   			_termFrequencies = {};
 
+        if (_numWords == 0) {
+          NLP.Debug.msg("warning: numWords is 0");
+        }
+        
   			for (var word in wordCounts) {
-  			  _termFrequencies[word] = wordCounts[word] / _numWords;
+  			  _termFrequencies[word] = (_numWords == 0 ? 0 : (wordCounts[word] / _numWords));
   			}  			
 		  }		  
 			
@@ -122,18 +126,25 @@ NLP.Document = function(text) {
 				// return a normalized vector, so we accumulate the sum of squared values
 				var mag_sum = 0;
 												
-				for (var term in termFrequencies) {				
+				for (var term in termFrequencies) {
 				  var val = termFrequencies[term] * NLP.Corpus.idf(term);
-					_tfidfs[term] = val;
-					mag_sum += (val * val);
+
+				  if (isNaN(val)) {
+				    NLP.Debug.msg("val " + val + " for " + term + " is not a number");
+				  } else {				  
+					  _tfidfs[term] = val;
+					  mag_sum += (val * val);
+					}
 				}								
 				
-			  var mag = Math.sqrt(mag_sum);
-			  
-			  // divide all elements by magnitude
-			  for (term in _tfidfs) {
-			    _tfidfs[term] = mag;
-			  }
+				// mag_sum is zero when the documents are orthogonal
+			  if (mag_sum > 0) {
+			    var mag = Math.sqrt(mag_sum);
+  			  // divide all elements by magnitude
+  			  for (term in _tfidfs) {
+  			    _tfidfs[term] = (_tfidfs[term] / mag);
+  			  }
+  			}
 			}
 			
 			return _tfidfs;
@@ -153,11 +164,11 @@ NLP.Corpus = function() {
 	return {		
 		// inverse document frequency
 		idf: function(term) {
-		  if (!(term in _idfs)) {		    		    
+		  if (!(_idfs.hasOwnProperty(term))) {		    		    
 		    var count = 0;
   			// find num docs where the term appears
   			for (var i in _documents) {				
-  				if (_documents[i].wordCounts()[term]) { ++count; }					
+  				if (_documents[i].wordCounts().hasOwnProperty(term)) { ++count; }					
   			}
 			
   			if (count == 0) { 
@@ -189,6 +200,10 @@ NLP.Corpus = function() {
 			var tfidfs1 = doc1.tfidfs();									
 			var tfidfs2 = doc2.tfidfs();
 			
+      // console.log(tfidfs2);
+      // console.log(doc2.termFrequencies());
+      // console.log(doc2.wordCounts());
+			
 			var dotproduct = 0;
 			
 			var unionTerms = NLP.Corpus.unionTerms();
@@ -196,8 +211,8 @@ NLP.Corpus = function() {
 			for (var term in unionTerms) {
 				var delta = 0;
 				
-				var tfidf1 = tfidfs1[term] ? tfidfs1[term] : delta;				
-				var tfidf2 = tfidfs2[term] ? tfidfs2[term] : delta;    
+				var tfidf1 = tfidfs1.hasOwnProperty(term) ? tfidfs1[term] : delta;				
+				var tfidf2 = tfidfs2.hasOwnProperty(term) ? tfidfs2[term] : delta;    
 						
 				dotproduct += (tfidf1 * tfidf2);				
 			}
