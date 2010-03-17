@@ -61,21 +61,17 @@ NLP.Document = function(text) {
 		text: function() { return _text; },
 		
 		wordCounts: function() {
-			if (_wordCounts === null) {	
+			if (_wordCounts === null) {				  
 				_wordCounts = {};					
 				// split document into separate words
 				var words = _text.split(/\s/);
-				
-				// save number of words
-				_numWords = words.length;
-				
-				var i = 0;
-				
+												
 				$.each(words, function(i, word) {
 					word = word.toLowerCase();
 					// remove trailing and leading non-alphanumeric chars
 					word = word.replace(/[^a-z0-9]+$/, "");
 					word = word.replace(/^[^a-z0-9]+/, "");
+					
 					// convert accents to ascii chars
 					word = NLP.AccentRemover.removeAccents(word);
 
@@ -86,12 +82,15 @@ NLP.Document = function(text) {
   						_wordCounts[word] = _wordCounts[word] + 1;
   					}
   				}  				
-				});
-															
+				});				
+																			
 				// kill stop words
 				$.each(_stopWords, function(i, stopWord) {
   			  delete _wordCounts[stopWord];
-  		  });							  		    		  
+  		  });  		  
+  		  
+  		  // save number of words
+				_numWords = _wordCounts.length;
 			}
 			
 			return _wordCounts;
@@ -115,11 +114,15 @@ NLP.Document = function(text) {
 			if (_tfidfs === null) {							
 				_tfidfs = {};
 				
+	      var start = new Date().getTime();
+				
 				var termFrequencies = this.termFrequencies();
 				
 				for (var term in termFrequencies) {				
 					_tfidfs[term] = termFrequencies[term] * NLP.Corpus.idf(term);
-				}								
+				}	
+				
+				console.log("tfidf: " + (new Date().getTime() - start));							
 			}
 			
 			return _tfidfs;
@@ -134,32 +137,45 @@ NLP.Document = function(text) {
 NLP.Corpus = function() {  
 	var _documents = [];
 	var _unionTerms = null;
+	var _idfs = {};
 	
 	return {		
 		// inverse document frequency
 		idf: function(term) {
-			var count = 0;
-			// find num docs where the term appears
-			for (var i in _documents) {				
-				if (_documents[i].wordCounts()[term]) { ++count; }					
-			}
+		  if (!(term in _idfs)) {		    		    
+		    var count = 0;
+  			// find num docs where the term appears
+  			for (var i in _documents) {				
+  				if (_documents[i].wordCounts()[term]) { ++count; }					
+  			}
 			
-			if (count == 0) { 
-			  console.log("warning: idf is 0 for term " + term);
-			  return 0;
-		  }
+  			if (count == 0) { 
+  			  console.log("warning: idf is 0 for term " + term);
+  			  return 0;
+  		  }
 			
-			return Math.log(_documents.length / count);
+  			_idfs[term] = Math.log(_documents.length / count);  			
+  		}
+  		
+  		return _idfs[term];
 		},
 						
 		unionTerms: function() {
 		  if (_unionTerms === null) {
+			  
+		    
 		    _unionTerms = {};
-		    for (var i in _documents) {
-		      for (var term in _documents[i].tfidfs()) {
+		    $.each(_documents, function(i, doc) {
+		      
+
+		      var tfidfs = doc.tfidfs();		      
+		      
+		      for (var term in tfidfs) {
 		        _unionTerms[term] = 0;
 		      }
-		    }		    
+		    });
+		    
+		    
 		  }
 		  
 		  return _unionTerms;
