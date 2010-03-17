@@ -83,14 +83,17 @@ NLP.Document = function(text) {
   					}
   				}  				
 				});				
+
+  		  // save number of words
+				_numWords = words.length;
 																			
 				// kill stop words
 				$.each(_stopWords, function(i, stopWord) {
-  			  delete _wordCounts[stopWord];
-  		  });  		  
-  		  
-  		  // save number of words
-				_numWords = _wordCounts.length;
+          if (stopWord in _wordCounts) {
+            delete _wordCounts[stopWord];
+            --_numWords;
+          }
+  		  });
 			}
 			
 			return _wordCounts;
@@ -113,23 +116,31 @@ NLP.Document = function(text) {
 		tfidfs: function() {
 			if (_tfidfs === null) {							
 				_tfidfs = {};
-				
-	      var start = new Date().getTime();
-				
+													      				
 				var termFrequencies = this.termFrequencies();
 				
+				// return a normalized vector, so we accumulate the sum of squared values
+				var mag_sum = 0;
+												
 				for (var term in termFrequencies) {				
-					_tfidfs[term] = termFrequencies[term] * NLP.Corpus.idf(term);
-				}	
+				  var val = termFrequencies[term] * NLP.Corpus.idf(term);
+					_tfidfs[term] = val;
+					mag_sum += (val * val);
+				}								
 				
-				console.log("tfidf: " + (new Date().getTime() - start));							
+			  var mag = Math.sqrt(mag_sum);
+			  
+			  // divide all elements by magnitude
+			  for (term in _tfidfs) {
+			    _tfidfs[term] = mag;
+			  }
 			}
 			
 			return _tfidfs;
 		},
 		
 		clearTfIdfs: function() {
-		  _tfidfs = null;
+		  _tfidfs = null;		  
 		}
 	};
 };
@@ -162,32 +173,23 @@ NLP.Corpus = function() {
 						
 		unionTerms: function() {
 		  if (_unionTerms === null) {
-			  
-		    
 		    _unionTerms = {};
-		    $.each(_documents, function(i, doc) {
-		      
-
-		      var tfidfs = doc.tfidfs();		      
-		      
-		      for (var term in tfidfs) {
+		    $.each(_documents, function(i, doc) {		      
+		      var wordCounts = doc.wordCounts();
+		      for (var term in wordCounts) {
 		        _unionTerms[term] = 0;
 		      }
-		    });
-		    
-		    
+		    });		    		    
 		  }
 		  
 		  return _unionTerms;
 		},	
     										
-		docSimilarity: function(doc1, doc2) {
-			var tfidfs1 = doc1.tfidfs();
+		docSimilarity: function(doc1, doc2) {		  		  
+			var tfidfs1 = doc1.tfidfs();									
 			var tfidfs2 = doc2.tfidfs();
-						
+			
 			var dotproduct = 0;
-			var mag1 = 0;
-			var mag2 = 0;						
 			
 			var unionTerms = NLP.Corpus.unionTerms();
 			
@@ -197,20 +199,12 @@ NLP.Corpus = function() {
 				var tfidf1 = tfidfs1[term] ? tfidfs1[term] : delta;				
 				var tfidf2 = tfidfs2[term] ? tfidfs2[term] : delta;    
 						
-				dotproduct += (tfidf1 * tfidf2);
-				mag1 += (tfidf1 * tfidf1);								
-				mag2 += (tfidf2 * tfidf2);
+				dotproduct += (tfidf1 * tfidf2);				
 			}
 			
-			if (mag1 == 0 || mag2 == 0) {
-			  NLP.Debug.msg('mag1 or mag2 is zero');
-			  return 0;
-			}
-			
-			mag1 = Math.sqrt(mag1);
-			mag2 = Math.sqrt(mag2);						
-			
-			return dotproduct / (mag1 * mag2);			
+			// note we can just return the dot product because 
+			// the tf-idf vectors are already normalized
+			return dotproduct;
 		},
 		
 		addDocument: function(document) {	
@@ -218,6 +212,7 @@ NLP.Corpus = function() {
 		  
 		  // discard cached stuff
 		  _unionTerms = null;
+		  _idfs = {};		  
 		  
 		  $.each(_documents, function(index, doc) {
 		    doc.clearTfIdfs();

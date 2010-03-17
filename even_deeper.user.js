@@ -65,7 +65,7 @@ EvenDeeper.Article = function(source, title, body, url) {
   var _url = url;
   var _source = source;
   var _updatedBodyCallback = null;
-  var _enableUpdatingFromSource = false;
+  var _enableUpdatingFromSource = true;
   
   // given an article with an insigificant body, visits its url to get the full article   
   function updateBodyFromSource() {
@@ -147,9 +147,9 @@ EvenDeeper.PageTypes.TestHarness = function() {
   return { 
     displayResults: function(articles) {      
       for (i in articles) {
-        /*console.log(articles[i].title());
+        console.log(articles[i].title());
         console.log(articles[i].similarityToCurrentArticle);
-        console.log(articles[i].body());*/
+        /*console.log(articles[i].body());*/
       }
     },
     
