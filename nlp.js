@@ -3,6 +3,43 @@
 
 var NLP = {};
 
+NLP.AccentRemover = function() {
+  var _accentRegexes = null;
+	var _accentReplacements = null;			
+	var _masterRegex = null;
+	
+  return {
+    removeAccents: function(r) {
+  	  if (_accentRegexes === null) {
+  	    _accentRegexes = [];
+  	    _accentRegexes.push(new RegExp("[àáâãäå]", 'g'));
+  	    _accentRegexes.push(new RegExp("æ", 'g'));
+  	    _accentRegexes.push(new RegExp("ç", 'g'));
+  	    _accentRegexes.push(new RegExp("[èéêë]", 'g'));
+  	    _accentRegexes.push(new RegExp("[ìíîï]", 'g'));
+  	    _accentRegexes.push(new RegExp("ñ", 'g'));
+  	    _accentRegexes.push(new RegExp("[òóôõö]", 'g'));
+  	    _accentRegexes.push(new RegExp("[ùúûü]", 'g'));
+  	    _accentRegexes.push(new RegExp("[ýÿ]", 'g'));
+	    
+  	    _accentRegexes.push();    
+  	    _accentReplacements = ['a', 'ae', 'c', 'e', 'i', 'n', 'o', 'u', 'y'];
+	    
+  	    _masterRegex = new RegExp("[àáâãäå]|æ|ç|[èéêë]|[ìíîï]|ñ|[òóôõö]|[ùúûü]|[ýÿ]", 'g');
+  	  }	
+
+      return r.replace(_masterRegex, function(str) {
+        for (i in _accentRegexes) {
+          str = str.replace(_accentRegexes[i], _accentReplacements[i]);          
+        }
+                    
+        return str;
+      });    
+    }
+	};
+	
+}();
+
 NLP.Document = function(text) {
 	var _text = text;
 	
@@ -10,8 +47,7 @@ NLP.Document = function(text) {
 	var _wordCounts = null;
 	var _numWords = null;
 	var _tfidfs = null;
-	var _accentRegexes = null;
-	var _accentReplacements = null;			
+	var _termFrequencies = null;
 	var _stopWords = [ 'a', 'also', 'an', 'and', 'as', 'at', 'be', 'but', 'by', 
                      'can', 'could', 'do', 'for', 'from', 'go', 'have', 'he', 'her',
                      'here', 'his', 'how', 'i', 'if', 'in', 'into', 'it', 'its',
@@ -20,37 +56,6 @@ NLP.Document = function(text) {
                      'through', 'to', 'until', 'we', 'what', 'when', 'where', 'which',
                      'while', 'who', 'with', 'would', 'you', 'your'];
                      
-	function removeAccents(r) {
-	  if (_accentRegexes == null) {
-	    _accentRegexes = [];
-	    _accentRegexes.push(new RegExp("[àáâãäå]", 'g'));
-	    _accentRegexes.push(new RegExp("æ", 'g'));
-	    _accentRegexes.push(new RegExp("ç", 'g'));
-	    _accentRegexes.push(new RegExp("[èéêë]", 'g'));
-	    _accentRegexes.push(new RegExp("[ìíîï]", 'g'));
-	    _accentRegexes.push(new RegExp("ñ", 'g'));
-	    _accentRegexes.push(new RegExp("òóôõö", 'g'));
-	    _accentRegexes.push(new RegExp("ùúûü", 'g'));
-	    _accentRegexes.push(new RegExp("ýÿ", 'g'));
-	    
-	    _accentReplacements = [];
-	    _accentReplacements.push('a');
-	    _accentReplacements.push('ae');
-	    _accentReplacements.push('c');
-	    _accentReplacements.push('e');
-	    _accentReplacements.push('i');    
-	    _accentReplacements.push('n');
-	    _accentReplacements.push('o');
-	    _accentReplacements.push('u');
-	    _accentReplacements.push('y');	    
-	  }
-	  
-	  for (i in _accentRegexes) {
-      r = r.replace(_accentRegexes[i], _accentReplacements[i]);
-    }
-    
-    return r;
-	}
 	
 	return {
 		text: function() { return _text; },
@@ -72,7 +77,7 @@ NLP.Document = function(text) {
 					word = word.replace(/[^a-z0-9]+$/, "");
 					word = word.replace(/^[^a-z0-9]+/, "");
 					// convert accents to ascii chars
-					word = removeAccents(word);
+					word = NLP.AccentRemover.removeAccents(word);
 
 					if (word.length != 0) {					
   					if (!_wordCounts[word]) {
@@ -93,14 +98,16 @@ NLP.Document = function(text) {
 		},
 				
 		termFrequencies: function() {
-			var wordCounts = this.wordCounts();
-			var termFrequencies = {};
+		  if (_termFrequencies === null) {
+		    var wordCounts = this.wordCounts();
+  			_termFrequencies = {};
+
+  			for (var word in wordCounts) {
+  			  _termFrequencies[word] = wordCounts[word] / _numWords;
+  			}  			
+		  }		  
 			
-			for (var word in wordCounts) {
-				termFrequencies[word] = wordCounts[word] / _numWords;
-			}
-			
-			return termFrequencies;
+			return _termFrequencies;
 		},
 		
 		// term frequency * inverse document frequency

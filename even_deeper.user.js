@@ -65,6 +65,7 @@ EvenDeeper.Article = function(source, title, body, url) {
   var _url = url;
   var _source = source;
   var _updatedBodyCallback = null;
+  var _enableUpdatingFromSource = false;
   
   // given an article with an insigificant body, visits its url to get the full article   
   function updateBodyFromSource() {
@@ -110,7 +111,7 @@ EvenDeeper.Article = function(source, title, body, url) {
     source: function() { return _source; },
 
     updateBodyFromSourceIfNecessary: function(callback) {      
-      if (_body.length < 1000) {
+      if (_body.length < 1000 && _enableUpdatingFromSource) {
         _updatedBodyCallback = callback;
         updateBodyFromSource();
       } else {
@@ -146,9 +147,9 @@ EvenDeeper.PageTypes.TestHarness = function() {
   return { 
     displayResults: function(articles) {      
       for (i in articles) {
-        console.log(articles[i].title());
+        /*console.log(articles[i].title());
         console.log(articles[i].similarityToCurrentArticle);
-        console.log(articles[i].body());
+        console.log(articles[i].body());*/
       }
     },
     
@@ -210,7 +211,7 @@ EvenDeeper.GoogleReader = function() {
   var _articles = [];
   var _grLabel = 'foreign%20policy';
   var _grItemsPerGet = 20;
-  var _grMaxTotalItems = 20;
+  var _grMaxTotalItems = 50;
   var _grItemCount = 0;
   var _loginEmail = null;
   var _loginPassword = null;
@@ -306,8 +307,6 @@ EvenDeeper.GoogleReader = function() {
     if (continuation_tags.length != 0) {
       var continuation = continuation_tags[0].innerHTML;
       
-      EvenDeeper.debug(continuation);
-      
       processReaderItems(xml_response);
     
       _grItemCount += _grItemsPerGet;
@@ -385,19 +384,27 @@ EvenDeeper.Main = function() {
       NLP.Corpus.addDocument(this.nlpdoc);
     });    
     
-    NLP.Debug.dumpUnionTerms();
-    NLP.Debug.dumpDocumentTfIdf(_currentDoc);
+    /*NLP.Debug.dumpUnionTerms();
+    NLP.Debug.dumpDocumentTfIdf(_currentDoc);*/
+    
+    EvenDeeper.debug("starting similarity testing");
+    
+    var start = new Date().getTime();
     
     // compare reader-sourced articles to current article, stashing similarity in the article object
     $.each(articles, function() {
-      NLP.Debug.dumpDocumentTfIdf(this.nlpdoc);
+      // NLP.Debug.dumpDocumentTfIdf(this.nlpdoc);
       this.similarityToCurrentArticle = NLP.Corpus.docSimilarity(_currentDoc, this.nlpdoc);
     });                
-            
+                
+    var end = new Date().getTime();
+        
+    EvenDeeper.debug("similarity time: " + (end - start));
+    
     articles.sort(function(article_a, article_b) {
       return (article_b.similarityToCurrentArticle - article_a.similarityToCurrentArticle);
     });      
-            
+                
     // show results on current page
     EvenDeeper.CurrentPage.displayResults(articles);
   }  
