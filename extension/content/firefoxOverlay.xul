@@ -6,7 +6,11 @@
 	<script src="jquery-132min.js" />
   <script src="overlay.js"/>
 	<script src="nlp.js" />	
+	
+	<!-- note the order here matters; the latter 2 want EvenDeeper to be pre-defined -->
 	<script src="even_deeper.js" />
+	<script src="google_reader.js" />
+	<script src="worker_thread.js" />	
 	
   <stringbundleset id="stringbundleset">
     <stringbundle id="evendeeper-strings" src="chrome://evendeeper/locale/evendeeper.properties"/>

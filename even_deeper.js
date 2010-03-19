@@ -214,127 +214,6 @@ EvenDeeper.PageTypes.Guardian = function() {
   };
 };
 
-EvenDeeper.GoogleReader = function() {
-  var googleLogin = {};
-  var _articles = [];
-  var _grLabel = 'foreign%20policy';
-  var _grItemsPerGet = 20;
-  var _grMaxTotalItems = 20;
-  var _grItemCount = 0;
-  var _loginEmail = null;
-  var _loginPassword = null;
-  
-  function grLogin(callback) {    
-    var prefs = Components.classes["@mozilla.org/preferences-service;1"]
-                        .getService(Components.interfaces.nsIPrefBranch);
-    
-    _loginEmail = prefs.getCharPref("extensions.evendeeper.login");
-    _loginPassword = prefs.getCharPref("extensions.evendeeper.password");
-    
-    if (_loginEmail === null || _loginPassword === null) {
-      alert("Couldn't find login details in user prefs");
-      return;
-    }  
-    
-    jQuery.post("https://www.google.com/accounts/ClientLogin",
-      'accountType=HOSTED_OR_GOOGLE&service=reader&Email= ' + _loginEmail + '&Passwd=' + _loginPassword + '&source=' + EvenDeeper.userAgent,
-      function(data) {                        
-        googleLogin['SID'] = data.match(/SID=(.*)/)[0];        
-        EvenDeeper.debug("logged into Google Reader with sid " + googleLogin['SID']);        
-        callback();
-      }
-    );
-  };
-  
-  function grGetItemsXHR(continuation) {
-    var url = 'http://www.google.com/reader/atom/user/-/label/' + _grLabel + "?n=" + _grItemsPerGet;
-    if (continuation) {
-      url += "&c=" + continuation;
-    }
-    
-    EvenDeeper.debug("getting items from " + url + " with sid " + googleLogin['SID']);
-        
-    jQuery.ajax({
-      url: url,
-      beforeSend: function(xhr) {
-        xhr.setRequestHeader('Cookie', googleLogin['SID'] + ';');
-      },
-      success: grGetItemsCallback
-    });
-  };
-  
-  function processReaderItems(xml_response) {      
-    // add all documents in response to corpus
-    xml_response.find("entry").each(function() {                    
-      // create and store article
-      var article = EvenDeeper.ArticleFactory.createArticleFromAtom(new EvenDeeper.AtomEntry($(this)));
-            
-      if (_articles.length < _grMaxTotalItems) {
-        _articles.push(article);      
-        return true;
-      } else {
-        return false;
-      }
-    });    
-            
-    // make feeds
-    // xml_response.find("feed")
-  };
-    
-  function grGetItems() {
-    // we can't process all the items at once as that uses a lot of memory and firefox shits itself,
-    // so we process the items in batches of 20 at a time, using the continuation parameter to 
-    // continually request sets.        
-    grGetItemsXHR(null);
-  };
-  
-  function grGetItemsCallback(data) {    
-    // convert responseText into a dom tree we can parse
-    var xml_response = $(data);
-    
-    // verify response
-    if (xml_response.children()[0].tagName != "feed") {
-      EvenDeeper.errorMsg("Google Reader responded with something indecipherable.");
-      return;
-    }
-    
-    // EvenDeeper.debug(xml_response.children());
-    
-    // getting the continuation is a pain in the ass because jquery doesn't support namespaces (apparently)
-    var continuation_tags = xml_response.children().children().filter(function() { return this.tagName == "gr:continuation"; });
-    
-    if (continuation_tags.length != 0) {
-      var continuation = continuation_tags[0].textContent;
-      
-      processReaderItems(xml_response);
-    
-      _grItemCount += _grItemsPerGet;
-              
-      if (_grItemCount < _grMaxTotalItems) {
-        grGetItemsXHR(continuation);
-      } else {
-        _grGotAllItemsCallback();
-      }
-    } else {
-      processReaderItems(xml_response);
-      _grGotAllItemsCallback();
-    }
-  };
-    
-  return {
-    loadItems: function(callback) {
-      _grGotAllItemsCallback = callback;      
-      grLogin(function() { grGetItems(); });
-    },
-    
-    articles: function(articles) { return _articles; },
-    
-    initLogin: function(reader_login, reader_password) {    
-      _loginEmail = reader_login;
-      _loginPassword = reader_password;
-    }
-  };
-}();
 
 EvenDeeper.ArticleBodyUpdater = function() {
   var _index = 0;
@@ -362,163 +241,115 @@ EvenDeeper.ArticleBodyUpdater = function() {
       }
     }
   };
-}();
+};
 
 EvenDeeper.Main = function() {
   var _currentDoc = null;
   var _currentArticle = null;
   var _max_nlp_considered_chars = 1000;
   var _useWorkerThread = true;
+  var _googleReader = new EvenDeeper.GoogleReader();
   
+  var _backgroundThreadInstance = null;
+  var _mainThreadInstance = null;
+  var _currentPage = null;
+  var _corpus = new NLP.Corpus();
+  var _this = null;
+    
   function nlpDocFromArticle(article) {
     // we truncate the document because usually the key bits of the article are at the top
     // and this reduces the bias towards large documents
     //return new NLP.Document(article.body().substring(0, _max_nlp_considered_chars));
-    return new NLP.Document(article.body());
+    return new NLP.Document(_corpus, article.body());
   }
   
-  function updatedArticleBodies(articles) {            
+  function updatedArticleBodies(articles) {                
     EvenDeeper.debug("done updating");
     
-    jQuery.each(articles, function() {
+    // save articles
+    _articles = articles;
+    
+    // populate corpus    
+    jQuery.each(_articles, function(index, article) {
       // create document from article and add to corpus; stash doc in article
-      this.nlpdoc = nlpDocFromArticle(this);
-      NLP.Corpus.addDocument(this.nlpdoc);
-      
+      article.nlpdoc = nlpDocFromArticle(article);
+      _corpus.addDocument(article.nlpdoc);      
     });    
     
     if (_useWorkerThread) {
       // spawn a thread and process the articles
-      EvenDeeper.backgroundThreadInstance = Components.classes["@mozilla.org/thread-manager;1"].getService().newThread(0);
-      EvenDeeper.mainThreadInstance = Components.classes["@mozilla.org/thread-manager;1"].getService().mainThread;
-      EvenDeeper.backgroundThreadInstance.dispatch(new workingThread(1, _currentDoc, articles), EvenDeeper.backgroundThreadInstance.DISPATCH_NORMAL);
+      _backgroundThreadInstance = Components.classes["@mozilla.org/thread-manager;1"].getService().newThread(0);
+      _mainThreadInstance = Components.classes["@mozilla.org/thread-manager;1"].getService().mainThread;      
+      _backgroundThreadInstance.dispatch(new workingThread(1, _this), _backgroundThreadInstance.DISPATCH_NORMAL);
     } else {
-      EvenDeeper.ArticleSimilarity.findArticleSimilarities(_currentDoc, articles);
-      EvenDeeper.Main.finishedCalculatingSimilarities();
-    }
-    
-    /*NLP.Debug.dumpUnionTerms();
-    NLP.Debug.dumpDocumentTfIdf(_currentDoc);*/
-    
-    // EvenDeeper.debug("starting similarity testing");
-                      
+      findArticleSimilarities();
+      _this.onFinishedCalculatingSimilarities();
+    }                    
   } 
     
   function grGotAllItems() { 
     EvenDeeper.debug("got items");    
-    var articles = EvenDeeper.GoogleReader.articles();
+    var articles = _googleReader.articles();
     // update bodies from articles sources
-    EvenDeeper.ArticleBodyUpdater.updateArticles(articles, updatedArticleBodies);
-  }
-          
-  return {
+    new EvenDeeper.ArticleBodyUpdater().updateArticles(articles, updatedArticleBodies);
+  };
+  
+  _this = {
     init: function(doc) { 
       EvenDeeper.debug(doc.location.href);
       
+      // init for the correct page type
+      
       if (doc.location.href.match(/guardian.co.uk/) && $("#article-wrapper").length > 0) {
-        EvenDeeper.CurrentPage = new EvenDeeper.PageTypes.Guardian();
+        _currentPage = new EvenDeeper.PageTypes.Guardian();
         EvenDeeper.debug("initialized as guardian");
       } else if (doc.location.href.match(/deckardsoftware.com/)) {
-        EvenDeeper.CurrentPage = new EvenDeeper.PageTypes.TestHarness();    
+        _currentPage = new EvenDeeper.PageTypes.TestHarness();    
         EvenDeeper.debug("initialized as harness");
       } else {
         return;
       }
                       
       // make an article from the current article
-      _currentArticle = EvenDeeper.CurrentPage.createArticleFromCurrentPage();      
+      _currentArticle = _currentPage.createArticleFromCurrentPage();      
       _currentDoc = nlpDocFromArticle(_currentArticle);
-      NLP.Corpus.addDocument(_currentDoc);    
+      _corpus.addDocument(_currentDoc);    
       
       // get new articles from google reader
-      EvenDeeper.GoogleReader.loadItems(grGotAllItems);
+      _googleReader.loadItems(grGotAllItems);
     }, 
     
-    finishedCalculatingSimilarities: function() {
-      // show results on current page
-      EvenDeeper.CurrentPage.displayResults(EvenDeeper.GoogleReader.articles());      
-    }  
-  };
-}();
-
-EvenDeeper.ArticleSimilarity = function() {
-  return { 
-    findArticleSimilarities: function(currentDoc, articles) {
+    findArticleSimilarities: function() {
       //dump("starting similarity testing");
-      
+
       var start = new Date().getTime();
-      
+
       // compare reader-sourced articles to current article, stashing similarity in the article object
-      jQuery.each(articles, function(index, article) {        
-        article.similarityToCurrentArticle = NLP.Corpus.docSimilarity(currentDoc, article.nlpdoc);
+      jQuery.each(_articles, function(index, article) {        
+        article.similarityToCurrentArticle = _corpus.docSimilarity(_currentDoc, article.nlpdoc);
       });                
 
-      articles.sort(function(article_a, article_b) {
+      _articles.sort(function(article_a, article_b) {
         return (article_b.similarityToCurrentArticle - article_a.similarityToCurrentArticle);
       });
-      
+
       var end = new Date().getTime();
-      
+
       dump("similarity time: " + (end - start));
-    }
+    },
+    
+    onFinishedCalculatingSimilarities: function() {
+      // show results on current page
+      _currentPage.displayResults(_googleReader.articles());      
+    },
+    
+    articles: function() { return _articles; },
+    currentDoc: function() { return _currentDoc; },
+    mainThreadInstance: function() { return _mainThreadInstance; },
+    backgroundThreadInstance: function() { return _backgroundThreadInstance; }
   };
-}();
-
-// ff3 specific threading stuff yanked from https://developer.mozilla.org/en/The_Thread_Manager
-
-var mainThread = function(threadID, result) {
-  this.threadID = threadID;
-  this.result = result;
-};
-
-mainThread.prototype = {
-  run: function() {
-    try {
-      EvenDeeper.Main.finishedCalculatingSimilarities();
-    } catch(err) {
-      Components.utils.reportError(err);
-    }
-  },
   
-  QueryInterface: function(iid) {
-    if (iid.equals(Components.interfaces.nsIRunnable) ||
-        iid.equals(Components.interfaces.nsISupports)) {
-            return this;
-    }
-    throw Components.results.NS_ERROR_NO_INTERFACE;
-  }
-};
-
-var workingThread = function(threadID, currentDoc, articles) {
-  this.threadID = threadID;
-  this.result = 0;
-  this.articles = articles;
-  this.currentDoc = currentDoc;
-};
-
-workingThread.prototype = {
-  run: function() {
-    try {
-      // This is where the working thread does its processing work.
-      EvenDeeper.ArticleSimilarity.findArticleSimilarities(this.currentDoc, this.articles);
-      
-      // When it's done, call back to the main thread to let it know
-      // we're finished.
-      
-      EvenDeeper.mainThreadInstance.dispatch(new mainThread(this.threadID, this.result),
-        EvenDeeper.backgroundThreadInstance.DISPATCH_NORMAL);
-    } catch(err) {
-      Components.utils.reportError(err);
-    }
-  },
-  
-  QueryInterface: function(iid) {
-    if (iid.equals(Components.interfaces.nsIRunnable) ||
-        iid.equals(Components.interfaces.nsISupports)) {
-            return this;
-    }
-    throw Components.results.NS_ERROR_NO_INTERFACE;
-  }
+  return _this;
 };
 
 /*(function() {

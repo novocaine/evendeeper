@@ -19,7 +19,8 @@ var evendeeper = {
   onPageLoad: function(e) {
     // this gets used by $ so can't actually exec jquery
     evendeeper.doc = e.originalTarget;    
-    EvenDeeper.Main.init(evendeeper.doc);    
+    var main = new EvenDeeper.Main();    
+    main.init(evendeeper.doc);
   },
   
   onMenuItemCommand: function(e) {

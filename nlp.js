@@ -40,8 +40,9 @@ NLP.AccentRemover = function() {
 	
 }();
 
-NLP.Document = function(text) {
+NLP.Document = function(corpus, text) {
 	var _text = text;
+	var _corpus = corpus;
 	
 	// associative array of the frequencies of each word
 	var _wordCounts = null;
@@ -59,6 +60,7 @@ NLP.Document = function(text) {
 	
 	return {
 		text: function() { return _text; },
+		corpus: function() { return _corpus; },
 		
 		wordCounts: function() {
 			if (_wordCounts === null) {				  
@@ -127,7 +129,7 @@ NLP.Document = function(text) {
 				var mag_sum = 0;
 												
 				for (var term in termFrequencies) {
-				  var val = termFrequencies[term] * NLP.Corpus.idf(term);
+				  var val = termFrequencies[term] * _corpus.idf(term);
 
 				  if (isNaN(val)) {
 				    NLP.Debug.msg("val " + val + " for " + term + " is not a number");
@@ -207,7 +209,7 @@ NLP.Corpus = function() {
 			
 			var dotproduct = 0;
 			
-			var unionTerms = NLP.Corpus.unionTerms();
+			var unionTerms = this.unionTerms();
 			
 			for (var term in unionTerms) {
 				var delta = 0;
@@ -235,12 +237,12 @@ NLP.Corpus = function() {
 		  });
 		}
 	};
-}();
+};
 
 NLP.Debug = function() {
   return {
-    dumpUnionTerms: function() {
-  	  for (var term in NLP.Corpus.unionTerms()) {	    
+    dumpUnionTerms: function(corpus) {
+  	  for (var term in corpus.unionTerms()) {	    
   	    $(document.body).append(term + "<br />");
   	  }
   	},
@@ -249,7 +251,7 @@ NLP.Debug = function() {
   	  var tfidfs = doc.tfidfs();
   	  
   	  for (var term in tfidfs) {
-  	    $(document.body).append(term + ", idf: " + NLP.Corpus.idf(term) + " tfidf: " + tfidfs[term] + "<br />");
+  	    $(document.body).append(term + ", idf: " + doc.corpus().idf(term) + " tfidf: " + tfidfs[term] + "<br />");
   	  }
   	},
   	
