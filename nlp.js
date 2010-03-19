@@ -66,7 +66,7 @@ NLP.Document = function(text) {
 				// split document into separate words
 				var words = _text.split(/\s/);
 												
-				$.each(words, function(i, word) {
+				jQuery.each(words, function(i, word) {
 					word = word.toLowerCase();
 					// remove trailing and leading non-alphanumeric chars
 					word = word.replace(/[^a-z0-9]+$/, "");
@@ -88,7 +88,7 @@ NLP.Document = function(text) {
 				_numWords = words.length;
 																			
 				// kill stop words
-				$.each(_stopWords, function(i, stopWord) {
+				jQuery.each(_stopWords, function(i, stopWord) {
           if (_wordCounts.hasOwnProperty(stopWord)) {
             delete _wordCounts[stopWord];
             --_numWords;
@@ -185,7 +185,7 @@ NLP.Corpus = function() {
 		unionTerms: function() {
 		  if (_unionTerms === null) {
 		    _unionTerms = {};
-		    $.each(_documents, function(i, doc) {		      
+		    jQuery.each(_documents, function(i, doc) {		      
 		      var wordCounts = doc.wordCounts();
 		      for (var term in wordCounts) {
 		        _unionTerms[term] = 0;
@@ -200,7 +200,8 @@ NLP.Corpus = function() {
 			var tfidfs1 = doc1.tfidfs();									
 			var tfidfs2 = doc2.tfidfs();
 			
-      // console.log(tfidfs2);
+			// NLP.Debug.msg(tfidfs1);
+      // NLP.Debug.msg(tfidfs2);
       // console.log(doc2.termFrequencies());
       // console.log(doc2.wordCounts());
 			
@@ -229,7 +230,7 @@ NLP.Corpus = function() {
 		  _unionTerms = null;
 		  _idfs = {};		  
 		  
-		  $.each(_documents, function(index, doc) {
+		  jQuery.each(_documents, function(index, doc) {
 		    doc.clearTfIdfs();
 		  });
 		}
@@ -253,7 +254,9 @@ NLP.Debug = function() {
   	},
   	
   	msg: function(msg) {
-  	  console.log(msg);  	  
+  	  dump(msg);
+  	  // cant use this from worker thread
+  	  //Firebug.Console.log(msg);  	  
   	}
   };
 }();

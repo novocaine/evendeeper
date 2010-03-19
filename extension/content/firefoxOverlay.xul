@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet href="chrome://evendeeper/skin/overlay.css" type="text/css"?>
+<!DOCTYPE overlay SYSTEM "chrome://evendeeper/locale/evendeeper.dtd">
+<overlay id="evendeeper-overlay"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+	<script src="jquery-132min.js" />
+  <script src="overlay.js"/>
+	<script src="nlp.js" />	
+	<script src="even_deeper.js" />
+	
+  <stringbundleset id="stringbundleset">
+    <stringbundle id="evendeeper-strings" src="chrome://evendeeper/locale/evendeeper.properties"/>
+  </stringbundleset>
+
+  <menupopup id="menu_ToolsPopup">
+    <menuitem id="evendeeper-hello" label="&evendeeper.label;" 
+              oncommand="evendeeper.onMenuItemCommand(event);"/>
+  </menupopup>
+</overlay>
