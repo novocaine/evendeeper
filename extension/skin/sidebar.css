@@ -1,0 +1,12 @@
+#evenDeeperSidebar #more-articles
+{
+  font-weight: bold;
+  text-decoration: underline;
+  color: blue;
+  cursor: pointer;
+}
+
+.loading
+{
+  font-weight: bold;
+}

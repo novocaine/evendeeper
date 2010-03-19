@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css" ?>
+<?xml-stylesheet href="chrome://browser/skin/browser.css" type="text/css" ?>
+<?xml-stylesheet href="chrome://evendeeper/skin/sidebar.css" type="text/css"?>
+
+<!DOCTYPE page SYSTEM "chrome://evendeeper/locale/evendeeper.dtd">
+
+<page id="evenDeeperSidebar" title="&evendeeper.title;"				 
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+	<script src="sidebar.js" />
+</page>
