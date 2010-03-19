@@ -24,7 +24,6 @@ EvenDeeper.errorMsg = function(msg) {
   alert("EvenDeeper: " + msg);
 };
 
-
 EvenDeeper.AtomEntry = function(xml) {
   var _xml = $(xml);
   
@@ -40,8 +39,10 @@ EvenDeeper.AtomEntry = function(xml) {
       // so we need to strip that out somehow. the trick we use here is
       // to create a temp div, set its innerHTML to the text content
       // of the original element (decoding the html-encoded message),
-      // then return its textContent in turn (thus stripping the tags)      
-      var div = evendeeper.doc.createElement("div");
+      // then return its textContent in turn (thus stripping the tags).
+      //
+      // hack: break encapsulation here to get a document handle
+      var div = EvenDeeperUI.Overlay.doc.createElement("div");
       div.innerHTML = elements[0].textContent;
       return(div.textContent);
     } else {
@@ -157,18 +158,7 @@ EvenDeeper.ArticleFactory = function() {
 EvenDeeper.PageTypes = {};
 
 EvenDeeper.PageTypes.TestHarness = function() {
-  return { 
-    displayResults: function(articles) {            
-      var sidebarWindow = document.getElementById("sidebar").contentWindow;
-            
-      // Verify that our sidebar is open at this moment:
-      if (sidebarWindow.location.href ==
-            "chrome://evendeeper/content/sidebar.xul") {
-        // call "yourNotificationFunction" in the sidebar's context:
-        sidebarWindow.EvenDeeperSidebar.displayArticles(articles);
-      }
-    },
-    
+  return {     
     createArticleFromCurrentPage: function() {
       // presumably test harness
       var body = "";
@@ -184,7 +174,7 @@ EvenDeeper.PageTypes.TestHarness = function() {
 
 EvenDeeper.PageTypes.Guardian = function() {
   return { 
-    displayResults: function(articles) {
+    /*displayResults: function(articles) {
       var after_elem = $("#content");
       
       var html = "<div id='even_deeper'><h3>Even Deeper</h3><ul>";
@@ -204,7 +194,7 @@ EvenDeeper.PageTypes.Guardian = function() {
       html += "</ul></div>";
       
       after_elem.append(html);
-    },
+    },*/
     
     createArticleFromCurrentPage: function() {
       var body = $("#article-wrapper p").text();
@@ -255,6 +245,8 @@ EvenDeeper.Main = function() {
   var _currentPage = null;
   var _corpus = new NLP.Corpus();
   var _this = null;
+  var _onFinishedCalculatingSimilarities = null;
+  var _contextDoc = null;
     
   function nlpDocFromArticle(article) {
     // we truncate the document because usually the key bits of the article are at the top
@@ -283,7 +275,7 @@ EvenDeeper.Main = function() {
       _backgroundThreadInstance.dispatch(new workingThread(1, _this), _backgroundThreadInstance.DISPATCH_NORMAL);
     } else {
       findArticleSimilarities();
-      _this.onFinishedCalculatingSimilarities();
+      _onFinishedCalculatingSimilarities();
     }                    
   } 
     
@@ -295,20 +287,31 @@ EvenDeeper.Main = function() {
   };
   
   _this = {
-    init: function(doc) { 
-      EvenDeeper.debug(doc.location.href);
+    // takes a context object which contains
+    //
+    // .doc, a pointer to the actual document object for the page to operate on
+    // .onFinishedCalculatingSimilarities, a callback that will be called with EvenDeeper.Article objects when done
+    // .onStartedCalculatingSimilarities, a callback that will be called with no arguments only if we start
+    
+    init: function(context) { 
+      _contextDoc = context.doc;
+      _onFinishedCalculatingSimilarities = context.onFinishedCalculatingSimilarities;
+      
+      EvenDeeper.debug(_contextDoc.location.href);
       
       // init for the correct page type
       
-      if (doc.location.href.match(/guardian.co.uk/) && $("#article-wrapper").length > 0) {
+      if (_contextDoc.location.href.match(/guardian.co.uk/) && $("#article-wrapper").length > 0) {
         _currentPage = new EvenDeeper.PageTypes.Guardian();
         EvenDeeper.debug("initialized as guardian");
-      } else if (doc.location.href.match(/deckardsoftware.com/)) {
+      } else if (_contextDoc.location.href.match(/deckardsoftware.com/)) {
         _currentPage = new EvenDeeper.PageTypes.TestHarness();    
         EvenDeeper.debug("initialized as harness");
       } else {
         return;
       }
+      
+      context.onStartedCalculatingSimilarities();
                       
       // make an article from the current article
       _currentArticle = _currentPage.createArticleFromCurrentPage();      
@@ -338,15 +341,12 @@ EvenDeeper.Main = function() {
       dump("similarity time: " + (end - start));
     },
     
-    onFinishedCalculatingSimilarities: function() {
-      // show results on current page
-      _currentPage.displayResults(_googleReader.articles());      
-    },
-    
     articles: function() { return _articles; },
     currentDoc: function() { return _currentDoc; },
     mainThreadInstance: function() { return _mainThreadInstance; },
-    backgroundThreadInstance: function() { return _backgroundThreadInstance; }
+    backgroundThreadInstance: function() { return _backgroundThreadInstance; },
+    contextDoc: function() { return _contextDoc; },
+    onFinishedCalculatingSimilarities: function() { return _onFinishedCalculatingSimilarities; }
   };
   
   return _this;
