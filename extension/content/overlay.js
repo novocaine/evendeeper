@@ -28,7 +28,6 @@ var evendeeper = {
     promptService.alert(window, this.strings.getString("helloMessageTitle"),
                                 this.strings.getString("helloMessage"));
   }
-
 };
 
 window.addEventListener("load", function(e) { evendeeper.onLoad(e); }, false);

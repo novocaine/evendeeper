@@ -63,7 +63,7 @@ EvenDeeper.AtomEntry = function(xml) {
             
     // idiosyncratically, greader returns a second title element as the feed title
     if (elements.length >= 2) {
-      return(elements[1].innerHTML);
+      return(elements[1].textContent);
     } else {
       return null;
     }
@@ -158,11 +158,14 @@ EvenDeeper.PageTypes = {};
 
 EvenDeeper.PageTypes.TestHarness = function() {
   return { 
-    displayResults: function(articles) {      
-      for (i in articles) {
-        EvenDeeper.debug(articles[i].title());
-        EvenDeeper.debug(articles[i].similarityToCurrentArticle);
-        //console.log(articles[i].body());
+    displayResults: function(articles) {            
+      var sidebarWindow = document.getElementById("sidebar").contentWindow;
+            
+      // Verify that our sidebar is open at this moment:
+      if (sidebarWindow.location.href ==
+            "chrome://evendeeper/content/sidebar.xul") {
+        // call "yourNotificationFunction" in the sidebar's context:
+        sidebarWindow.EvenDeeperSidebar.displayArticles(articles);
       }
     },
     
@@ -216,7 +219,7 @@ EvenDeeper.GoogleReader = function() {
   var _articles = [];
   var _grLabel = 'foreign%20policy';
   var _grItemsPerGet = 20;
-  var _grMaxTotalItems = 500;
+  var _grMaxTotalItems = 20;
   var _grItemCount = 0;
   var _loginEmail = null;
   var _loginPassword = null;
@@ -375,6 +378,8 @@ EvenDeeper.Main = function() {
   }
   
   function updatedArticleBodies(articles) {            
+    EvenDeeper.debug("done updating");
+    
     jQuery.each(articles, function() {
       // create document from article and add to corpus; stash doc in article
       this.nlpdoc = nlpDocFromArticle(this);

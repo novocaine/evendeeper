@@ -16,4 +16,22 @@
     <menuitem id="evendeeper-hello" label="&evendeeper.label;" 
               oncommand="evendeeper.onMenuItemCommand(event);"/>
   </menupopup>
+
+	<menupopup id="viewSidebarMenu">
+    <menuitem key="" observes="viewEvenDeeperSidebar" label="&evendeeper.title;" />
+  </menupopup>
+
+  <broadcasterset id="mainBroadcasterSet"> 
+    <broadcaster id="viewEvenDeeperSidebar" 
+                 label="&evendeeper.title;"
+                 autoCheck="false"
+                 type="checkbox"
+                 group="sidebar"
+								 checked="false"
+                 sidebarurl="chrome://evendeeper/content/sidebar.xul"
+                 sidebartitle="&evendeeper.title;"
+                 oncommand="toggleSidebar('viewEvenDeeperSidebar');" />
+  </broadcasterset>
 </overlay>
+
+
