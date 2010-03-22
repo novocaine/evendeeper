@@ -127,7 +127,7 @@ EvenDeeper.PageTypes.Guardian = function(main) {
     createArticleFromCurrentPage: function() {
       var body = main.jQueryFn("#article-wrapper p").text();
       var title = main.jQueryFn("#article-header h1").text();        
-      return new EvenDeeper.Article("The Guardian", title, body);
+      return new EvenDeeper.Article(main, "The Guardian", title, body);
     }         
   };
 };
