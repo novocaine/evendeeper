@@ -241,19 +241,19 @@ NLP.Corpus = function() {
 
 NLP.Debug = function() {
   return {
-    dumpUnionTerms: function(corpus) {
-  	  for (var term in corpus.unionTerms()) {	    
-  	    $(document.body).append(term + "<br />");
-  	  }
-  	},
+    //     dumpUnionTerms: function(corpus) {
+    //   for (var term in corpus.unionTerms()) {      
+    //     $(document.body).append(term + "<br />");
+    //   }
+    // },
   	
-  	dumpDocumentTfIdf: function(doc) {
-  	  var tfidfs = doc.tfidfs();
-  	  
-  	  for (var term in tfidfs) {
-  	    $(document.body).append(term + ", idf: " + doc.corpus().idf(term) + " tfidf: " + tfidfs[term] + "<br />");
-  	  }
-  	},
+    // dumpDocumentTfIdf: function(doc) {
+    //   var tfidfs = doc.tfidfs();
+    //   
+    //   for (var term in tfidfs) {
+    //     $(document.body).append(term + ", idf: " + doc.corpus().idf(term) + " tfidf: " + tfidfs[term] + "<br />");
+    //   }
+    // },
   	
   	msg: function(msg) {
   	  dump(msg);

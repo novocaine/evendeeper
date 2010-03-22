@@ -1,12 +1,65 @@
-EvenDeeper.GoogleReader = function() {
+EvenDeeper.AtomEntry = function(reader, xml) {
+  // we use jquery to parse the xml; that introduces a dependency on the current
+  // document which is why we need to pass a reader instance to the constructor
+  var _xml = reader.main().jQueryFn(xml);
+  
+  // returns the inner html of a sub-element in this article
+  this.elem = function(element_name) {        
+    var elements = _xml.find(element_name);
+            
+    if (elements.length >= 1) {
+      // retreiving the text is a bit tricky; the problem is that
+      // any html content in there is html-encoded (e.g. &lt; etc)
+      // so that it doesn't mess with the actual atom tagging itself.
+      //
+      // so we need to strip that out somehow. the trick we use here is
+      // to create a temp div, set its innerHTML to the text content
+      // of the original element (decoding the html-encoded message),
+      // then return its textContent in turn (thus stripping the tags).
+      //
+      // hack: break encapsulation here to get a document handle
+      var div = reader.main().contextDoc().createElement("div");
+      div.innerHTML = elements[0].textContent;
+      return(div.textContent);
+    } else {
+      return null;
+    }
+  };
+    
+  this.url = function() {
+    var elements = _xml.find("link");
+    if (elements.length >= 1) {
+      return(reader.main().jQueryFn(elements[0]).attr("href"));
+    } else {
+      return null;
+    }
+  };  
+  
+  this.feed_title = function() {
+    var elements = _xml.find("title");
+            
+    // idiosyncratically, greader returns a second title element as the feed title
+    if (elements.length >= 2) {
+      return(elements[1].textContent);
+    } else {
+      return null;
+    }
+  };
+  
+  this.xml = function() { return _xml; };
+};
+
+
+EvenDeeper.GoogleReader = function(main) {
   var googleLogin = {};
-  var _articles = [];
+  var _atoms = [];
   var _grLabel = 'foreign%20policy';
   var _grItemsPerGet = 20;
   var _grMaxTotalItems = 20;
   var _grItemCount = 0;
   var _loginEmail = null;
   var _loginPassword = null;
+  var _main = main;
   
   function grLogin(callback) {    
     var prefs = Components.classes["@mozilla.org/preferences-service;1"]
@@ -49,12 +102,14 @@ EvenDeeper.GoogleReader = function() {
   
   function processReaderItems(xml_response) {      
     // add all documents in response to corpus
-    xml_response.find("entry").each(function() {                    
+    xml_response.find("entry").each(function(index, entry) {
+      
+      
       // create and store article
-      var article = EvenDeeper.ArticleFactory.createArticleFromAtom(new EvenDeeper.AtomEntry($(this)));
+      var atom = new EvenDeeper.AtomEntry(_this, _main.jQueryFn(entry));
             
-      if (_articles.length < _grMaxTotalItems) {
-        _articles.push(article);      
+      if (_atoms.length < _grMaxTotalItems) {
+        _atoms.push(atom);      
         return true;
       } else {
         return false;
@@ -74,7 +129,7 @@ EvenDeeper.GoogleReader = function() {
   
   function grGetItemsCallback(data) {    
     // convert responseText into a dom tree we can parse
-    var xml_response = $(data);
+    var xml_response = main.jQueryFn(data);
     
     // verify response
     if (xml_response.children()[0].tagName != "feed") {
@@ -105,17 +160,21 @@ EvenDeeper.GoogleReader = function() {
     }
   };
     
-  return {
+  var _this = { 
+    main: function() { return _main; },
+    
     loadItems: function(callback) {
       _grGotAllItemsCallback = callback;      
       grLogin(function() { grGetItems(); });
     },
     
-    articles: function(articles) { return _articles; },
+    atoms: function(articles) { return _atoms; },
     
     initLogin: function(reader_login, reader_password) {    
       _loginEmail = reader_login;
       _loginPassword = reader_password;
     }
   };
+  
+  return _this;
 };

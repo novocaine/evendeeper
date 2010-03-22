@@ -9,7 +9,7 @@ mainThread.prototype = {
   run: function() {
     try {
       // send notification to even deeper that we're done
-      this.evendeeper.onFinishedCalculatingSimilarities();
+      this.evendeeper.getOnFinishedCalculatingSimilarities()(this.evendeeper);
     } catch(err) {
       Components.utils.reportError(err);
     }

@@ -1,13 +1,4 @@
-// ==UserScript==
-// @name           Even Deeper
-// @namespace      www.deckardsoftware.com/helloworld
-// @include        http://deckardsoftware.com/*
-// @include        file:///Users/jsalter/Documents/dev/evendeeper/nlp_harness.html
-// @require        http://code.jquery.com/jquery-1.3.2.min.js
-// @require        nlp.js
-// @require        login.js
-// ==/UserScript==
-
+// secret sauce to get jquery working
 var EvenDeeper = {};
 
 EvenDeeper.userAgent = 'EvenDeeper_0.1';
@@ -24,56 +15,7 @@ EvenDeeper.errorMsg = function(msg) {
   alert("EvenDeeper: " + msg);
 };
 
-EvenDeeper.AtomEntry = function(xml) {
-  var _xml = $(xml);
-  
-  // returns the inner html of a sub-element in this article
-  this.elem = function(element_name) {        
-    var elements = _xml.find(element_name);
-            
-    if (elements.length >= 1) {
-      // retreiving the text is a bit tricky; the problem is that
-      // any html content in there is html-encoded (e.g. &lt; etc)
-      // so that it doesn't mess with the actual atom tagging itself.
-      //
-      // so we need to strip that out somehow. the trick we use here is
-      // to create a temp div, set its innerHTML to the text content
-      // of the original element (decoding the html-encoded message),
-      // then return its textContent in turn (thus stripping the tags).
-      //
-      // hack: break encapsulation here to get a document handle
-      var div = EvenDeeperUI.Overlay.doc.createElement("div");
-      div.innerHTML = elements[0].textContent;
-      return(div.textContent);
-    } else {
-      return null;
-    }
-  };
-    
-  this.url = function() {
-    var elements = _xml.find("link");
-    if (elements.length >= 1) {
-      return($(elements[0]).attr("href"));
-    } else {
-      return null;
-    }
-  };  
-  
-  this.feed_title = function() {
-    var elements = _xml.find("title");
-            
-    // idiosyncratically, greader returns a second title element as the feed title
-    if (elements.length >= 2) {
-      return(elements[1].textContent);
-    } else {
-      return null;
-    }
-  };
-  
-  this.xml = function() { return _xml; };
-};
-
-EvenDeeper.Article = function(source, title, body, url) {
+EvenDeeper.Article = function(main, source, title, body, url) {
   var _title = title;
   var _body = body;
   var _url = url;
@@ -97,14 +39,14 @@ EvenDeeper.Article = function(source, title, body, url) {
   
   function yankPage_callback(response) {
     if (response.status == 200) {
-      var page = $(response.responseText);
+      var page = main.jQueryFn(response.responseText);
       var title = page.find("head title").text();
       var body = null;
 
       // generate body text 
       // strategy is to look for the first node containing > 1000 chars worth of text
       page.find("p").each(function(index, n) {      
-        var node = $(n);
+        var node = main.jQueryFn(n);
         if (node.parent().text().length > 500) {        
           _body = node.parent().children("p").text();        
           //EvenDeeper.debug(_body);
@@ -137,42 +79,28 @@ EvenDeeper.Article = function(source, title, body, url) {
 
 EvenDeeper.ArticleFactory = function() {
   return {
-    createArticleFromAtom: function(atom) {
-      var title = atom.elem("title");              
-      var body = atom.elem("content") || atom.elem("summary");
-
-      if (body === null) {
-        body = title;
-      }
-      
-      /*EvenDeeper.debug(title);
-      EvenDeeper.debug(body);*/
-            
-      var article = new EvenDeeper.Article(atom.feed_title(), title, body, atom.url());
-            
-      return article;
-    }    
+    
   };
-}();
+};
 
 EvenDeeper.PageTypes = {};
 
-EvenDeeper.PageTypes.TestHarness = function() {
+EvenDeeper.PageTypes.TestHarness = function(main) {
   return {     
     createArticleFromCurrentPage: function() {
       // presumably test harness
       var body = "";
 
-      $("#body p").each(function() {
-        body = body + $(this).text() + "\n";
+      main.jQueryFn("#body p").each(function() {
+        body = body + main.jQueryFn(this).text() + "\n";
       });
-
-      return new EvenDeeper.Article("", $("#title")[0].innerHTML, body);
+      
+      return new EvenDeeper.Article(main, "", main.jQueryFn("#title")[0].innerHTML, body);
     }
   };
 };
 
-EvenDeeper.PageTypes.Guardian = function() {
+EvenDeeper.PageTypes.Guardian = function(main) {
   return { 
     /*displayResults: function(articles) {
       var after_elem = $("#content");
@@ -197,8 +125,8 @@ EvenDeeper.PageTypes.Guardian = function() {
     },*/
     
     createArticleFromCurrentPage: function() {
-      var body = $("#article-wrapper p").text();
-      var title = $("#article-header h1").text();        
+      var body = main.jQueryFn("#article-wrapper p").text();
+      var title = main.jQueryFn("#article-header h1").text();        
       return new EvenDeeper.Article("The Guardian", title, body);
     }         
   };
@@ -238,8 +166,7 @@ EvenDeeper.Main = function() {
   var _currentArticle = null;
   var _max_nlp_considered_chars = 1000;
   var _useWorkerThread = true;
-  var _googleReader = new EvenDeeper.GoogleReader();
-  
+    
   var _backgroundThreadInstance = null;
   var _mainThreadInstance = null;
   var _currentPage = null;
@@ -247,19 +174,22 @@ EvenDeeper.Main = function() {
   var _this = null;
   var _onFinishedCalculatingSimilarities = null;
   var _contextDoc = null;
+  var _articles = [];
+  var _googleReader = null;
     
   function nlpDocFromArticle(article) {
     // we truncate the document because usually the key bits of the article are at the top
     // and this reduces the bias towards large documents
     //return new NLP.Document(article.body().substring(0, _max_nlp_considered_chars));
     return new NLP.Document(_corpus, article.body());
-  }
+  };
   
   function updatedArticleBodies(articles) {                
     EvenDeeper.debug("done updating");
+    // EvenDeeper.debug(articles);
     
     // save articles
-    _articles = articles;
+    // _articles = articles;
     
     // populate corpus    
     jQuery.each(_articles, function(index, article) {
@@ -274,38 +204,65 @@ EvenDeeper.Main = function() {
       _mainThreadInstance = Components.classes["@mozilla.org/thread-manager;1"].getService().mainThread;      
       _backgroundThreadInstance.dispatch(new workingThread(1, _this), _backgroundThreadInstance.DISPATCH_NORMAL);
     } else {
-      findArticleSimilarities();
-      _onFinishedCalculatingSimilarities();
+      _this.findArticleSimilarities();
+      _onFinishedCalculatingSimilarities(_this);
     }                    
-  } 
+  };
+  
+  function createArticleFromAtom(atom) {
+    var title = atom.elem("title");              
+    var body = atom.elem("content") || atom.elem("summary");
+
+    if (body === null) {
+      body = title;
+    }
+    
+    /*EvenDeeper.debug(title);
+    EvenDeeper.debug(body);*/
+          
+    return new EvenDeeper.Article(_this, atom.feed_title(), title, body, atom.url());
+  };
     
   function grGotAllItems() { 
-    EvenDeeper.debug("got items");    
-    var articles = _googleReader.articles();
+    EvenDeeper.debug("got items"); 
+           
+    // create articles from atoms
+    var atoms = _googleReader.atoms();
+    for (var i=0; i < atoms.length; ++i) {
+      _articles.push(createArticleFromAtom(atoms[i]));
+    }
+    
     // update bodies from articles sources
-    new EvenDeeper.ArticleBodyUpdater().updateArticles(articles, updatedArticleBodies);
+    new EvenDeeper.ArticleBodyUpdater().updateArticles(_articles, updatedArticleBodies);
   };
   
   _this = {
+    // secret sauce to get jQuery working using the correct doc. use this instead of $.
+    jQueryFn: function(selector, context) {
+      return new jQuery.fn.init(selector, context || _contextDoc);
+    },
+    
     // takes a context object which contains
     //
     // .doc, a pointer to the actual document object for the page to operate on
     // .onFinishedCalculatingSimilarities, a callback that will be called with EvenDeeper.Article objects when done
     // .onStartedCalculatingSimilarities, a callback that will be called with no arguments only if we start
     
-    init: function(context) { 
+    init: function(context) {       
       _contextDoc = context.doc;
       _onFinishedCalculatingSimilarities = context.onFinishedCalculatingSimilarities;
       
       EvenDeeper.debug(_contextDoc.location.href);
       
+      _googleReader = new EvenDeeper.GoogleReader(_this);
+      
       // init for the correct page type
       
-      if (_contextDoc.location.href.match(/guardian.co.uk/) && $("#article-wrapper").length > 0) {
-        _currentPage = new EvenDeeper.PageTypes.Guardian();
+      if (_contextDoc.location.href.match(/guardian.co.uk/) && _contextDoc.getElementById("article-wrapper")) {
+        _currentPage = new EvenDeeper.PageTypes.Guardian(this);
         EvenDeeper.debug("initialized as guardian");
       } else if (_contextDoc.location.href.match(/deckardsoftware.com/)) {
-        _currentPage = new EvenDeeper.PageTypes.TestHarness();    
+        _currentPage = new EvenDeeper.PageTypes.TestHarness(this);    
         EvenDeeper.debug("initialized as harness");
       } else {
         return;
@@ -346,7 +303,7 @@ EvenDeeper.Main = function() {
     mainThreadInstance: function() { return _mainThreadInstance; },
     backgroundThreadInstance: function() { return _backgroundThreadInstance; },
     contextDoc: function() { return _contextDoc; },
-    onFinishedCalculatingSimilarities: function() { return _onFinishedCalculatingSimilarities; }
+    getOnFinishedCalculatingSimilarities: function() { return _onFinishedCalculatingSimilarities; }
   };
   
   return _this;
