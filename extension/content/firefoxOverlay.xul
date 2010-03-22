@@ -4,6 +4,7 @@
 <overlay id="evendeeper-overlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 	<script src="jquery-132min.js" />
+	<script src="page_states.js" />
   <script src="overlay.js"/>
 	<script src="nlp.js" />	
 	

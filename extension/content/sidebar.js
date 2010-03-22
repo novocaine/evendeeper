@@ -4,14 +4,7 @@ EvenDeeperSidebar = function() {
   var _num_hidden_articles = 0;
   var _showing_more_articles = false;
   var _more_articles = null;
-  
-  var STATE_NO_PAGE = 0;
-  var STATE_WAITING_FOR_DOM_LOADED = 1;
-  var STATE_LOADING_ARTICLES = 2;
-  var STATE_LOADED = 3;
-  
-  var _state = STATE_NO_PAGE;
-
+    
   // other stuff can occupy the sidebar, so this checks that we're actually visible
   function isTheActiveSidebar() {
     // var win = document.getElementById("sidebar").contentWindow;
@@ -115,7 +108,7 @@ EvenDeeperSidebar = function() {
       updateMoreArticlesLink(false);
     }
     
-    if (articles.length == 0) {
+    if (articles.length === 0) {
       var no_articles_found = document.createElement("label");
       no_articles_found.setAttribute("value", "No articles found.");
       vbox.appendChild(no_articles_found);
@@ -145,52 +138,27 @@ EvenDeeperSidebar = function() {
     
     updateMoreArticlesLink(false);            
   };
-  
-  function setState(state) {
-    _state = state;
-  };
-      
-  return {    
-    onFinishedCalculatingSimilarities: function(evendeeper) {
-      setState(STATE_LOADED);
-      this.updateUI(evendeeper);
-    },
-    
-    onStartedCalculatingSimilarities: function(evendeeper) {
-      setState(STATE_LOADING_ARTICLES);
-      this.updateUI(evendeeper);
-    },
-    
-    onBrowserShowPage: function() {
-      setState(STATE_WAITING_FOR_DOM_LOADED);
-      this.updateUI();
-    },
-    
+        
+  return {      
     // update the sidebar based on its current state
-    updateUI: function(evendeeper) {
+    updateUI: function(state, evendeeper) {      
+      dump("updateUI " + state + "\n");
       if (!isTheActiveSidebar()) return;
       
-      switch(_state) {
-        case STATE_NO_PAGE:
+      switch(state) {
+        case EvenDeeperUI.PageStates.STATE_NO_PAGE:
           clearSidebar();
           break;
-        case STATE_WAITING_FOR_DOM_LOADED:
+        case EvenDeeperUI.PageStates.STATE_WAITING_FOR_DOM_LOADED:
           showLoading();
           break;
-        case STATE_LOADING_ARTICLES:
+        case EvenDeeperUI.PageStates.STATE_LOADING_ARTICLES:
           showLoading();
           break;
-        case STATE_LOADED:
+        case EvenDeeperUI.PageStates.STATE_LOADED:
           displayArticles(evendeeper.articles());
           break;
       }
-    },
-    
-    onSidebarLoad: function() {
-      Firebug.Console.log("onSidebarload");
-      this.updateUI();
-    }
+    }    
   };
 }();
-
-document.addEventListener("load", function(e) { EvenDeeperSidebar.onSidebarLoad(e); }, true);

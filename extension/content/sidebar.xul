@@ -7,5 +7,6 @@
 
 <page id="evenDeeperSidebar" title="&evendeeper.title;"				 
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+	<script src="page_states.js" />
 	<script src="sidebar.js" />
 </page>

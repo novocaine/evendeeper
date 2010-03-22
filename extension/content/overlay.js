@@ -1,73 +1,123 @@
-EvenDeeperUI = {};
-
-EvenDeeperUI.OverlayController = {
+EvenDeeperUI.OverlayController = function() {  
+  var _controllers = {};
+  var _nextControllerId = 0;
+  
   // startup and rego
-  onWindowLoad: function() {    
+  function onWindowLoad() {    
+    dump("windowLoad");    
     // initialization code
     this.initialized = true;
-    this.strings = document.getElementById("evendeeper-strings");
-    gBrowser.tabContainer.addEventListener("onTabSelect", EvenDeeperUI.OverlayController.onTabSelect, false);
-  },
+    this.strings = document.getElementById("evendeeper-strings");    
+    gBrowser.tabContainer.addEventListener("TabOpen", onTabAdd, false);
+    gBrowser.tabContainer.addEventListener("TabSelect", onTabSelect, false);
     
-  onMenuItemCommand: function(e) {
+    initController(gBrowser.selectedBrowser);
+    
+    // register for events
+    // var appcontent = gBrowser.contentDocument;
+    // gBrowser.addEventListener("DOMContentLoaded", onDOMContentLoaded, true);
+  };  
+    
+  function onMenuItemCommand(e) {
     var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
                                   .getService(Components.interfaces.nsIPromptService);
     promptService.alert(window, this.strings.getString("helloMessageTitle"),
                                 this.strings.getString("helloMessage"));
-  },
-      
-  onTabSelect: function() {
-    Firebug.Console.log("on tab select");
-  }
-};
-
-window.addEventListener("load", function(e) { EvenDeeperUI.OverlayController.onWindowLoad(e); }, false);
-
-EvenDeeperUI.PageController = {
-  // startup and rego
-  onWindowLoad: function() {
-    var appcontent = document.getElementById("appcontent");
-    if (appcontent) {
-      appcontent.addEventListener("DOMContentLoaded", EvenDeeperUI.PageController.onDOMContentLoaded, true);
-      appcontent.addEventListener("pageshow", EvenDeeperUI.PageController.onPageShow, true);
-    }    
-  },
+  };
+    
+  function onTabAdd(e) {
+    dump("tabAdd\n");
+    var browser = gBrowser.getBrowserForTab(e.target);
+    initController(browser);
+  };
   
-  onDOMContentLoaded: function(e) {        
-    // conjure up context for EvenDeeper.Main; basically we pass it
-    // a doc handle and some callbacks
-    
-    var context = { 
-      doc: e.originalTarget, 
-      onFinishedCalculatingSimilarities: function(main) {
-        var sb = EvenDeeperUI.PageController.getSidebar();
-        if (sb) sb.onFinishedCalculatingSimilarities(main);
-      },
-      
-      onStartedCalculatingSimilarities: function(main) {
-        var sb = EvenDeeperUI.PageController.getSidebar();
-        if (sb) sb.onStartedCalculatingSimilarities(main);
-      }
-    };
-    
-    var main = new EvenDeeper.Main();    
-    main.init(context);    
-  },
-  
-  onPageShow: function(e) {
-    var sb = EvenDeeperUI.PageController.getSidebar();
-    if (sb) sb.onBrowserShowPage(e);
-  },  
-        
-  getSidebar: function() {
-    var sidebarWindow = document.getElementById("sidebar").contentWindow;
-    
-    if (sidebarWindow.location.href == "chrome://evendeeper/content/sidebar.xul" && sidebarWindow.EvenDeeperSidebar) {
-      return sidebarWindow.EvenDeeperSidebar;
+  function initController(browser) {    
+    if (!browser.hasAttribute("EvenDeeper.ControllerIndex")) {
+      dump("making new controller with index " + _nextControllerId + "\n");
+      // add new controller for initial window if there is one
+      var controller = new EvenDeeperUI.PageController(_nextControllerId, browser);
+      browser.setAttribute("EvenDeeper.ControllerIndex", _nextControllerId);      
+      _controllers[_nextControllerId++] = controller;
     } else {
-      return null;
+      dump("not making new controller\n");
+    }
+  };
+  
+  function onTabSelect(e) {
+    var browser = gBrowser.getBrowserForTab(e.target);
+    var index = browser.getAttribute("EvenDeeper.ControllerIndex");
+    
+    if (index) {
+      dump("selecting controller " + index);
+      
+      var controller = _controllers[index];
+      controller.onTabSelect(e);
     }
   }
+  
+  window.addEventListener("load", onWindowLoad, false);
+}();
+
+EvenDeeperUI.getSidebar = function() {
+  var sidebarWindow = document.getElementById("sidebar").contentWindow;
+  
+  if (sidebarWindow.location.href == "chrome://evendeeper/content/sidebar.xul" && sidebarWindow.EvenDeeperSidebar) {
+    return sidebarWindow.EvenDeeperSidebar;
+  } else {
+    return null;
+  }
 };
 
-window.addEventListener("load", function(e) { EvenDeeperUI.PageController.onWindowLoad(e); }, false);
+EvenDeeperUI.PageController = function(id, browser) {
+  var _main = null;  
+  var _state = EvenDeeperUI.PageStates.STATE_NO_PAGE;
+  var _id = id;
+  
+  function setState(state) { _state = state; };  
+  function getState() { return _state; };
+  
+  function onFinishedCalculatingSimilarities(evendeeper) {
+    setState(EvenDeeperUI.PageStates.STATE_LOADED);
+    updateSidebar();
+  };
+  
+  function onStartedCalculatingSimilarities(evendeeper) {
+    setState(EvenDeeperUI.PageStates.STATE_LOADING_ARTICLES);
+    updateSidebar();
+  };
+  
+  function onBrowserShowPage() {
+    /*setState(EvenDeeperUI.PageStates.STATE_NO_PAGE);
+    updateSidebar();*/
+  };
+  
+  function updateSidebar() {
+    var sb = EvenDeeperUI.getSidebar();
+    if (sb) sb.updateUI(getState(), _main);
+  };
+  
+  function onDOMContentLoaded(e) {        
+    // conjure up context for EvenDeeper.Main; basically we pass it
+    // a doc handle and some callbacks    
+    var context = { 
+      doc: e.originalTarget, 
+      onFinishedCalculatingSimilarities: onFinishedCalculatingSimilarities,
+      onStartedCalculatingSimilarities: onStartedCalculatingSimilarities
+    };
+    
+    dump("making new EvenDeeper.Main() in controller " + _id + "\n");
+    
+    _main = new EvenDeeper.Main();    
+    _main.init(context);    
+  };
+    
+  browser.addEventListener("DOMContentLoaded", onDOMContentLoaded, true);  
+  updateSidebar();
+      
+  return {
+    onTabSelect: function() {    
+      dump("tabSelect\n");
+      updateSidebar();    
+    }    
+  };
+};
