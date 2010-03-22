@@ -45,13 +45,13 @@ EvenDeeperSidebar = function() {
     if (vbox) page.removeChild(vbox);
   };
   
-  function showLoading() {
+  function showLoading(text) {
     clearSidebar();
     
     var vbox = createVbox();
     
     var loading = document.createElement("label");
-    loading.setAttribute("value", "Loading...");
+    loading.setAttribute("value", text);
     loading.setAttribute("class", "loading");
     vbox.appendChild(loading);
   };
@@ -150,10 +150,10 @@ EvenDeeperSidebar = function() {
           clearSidebar();
           break;
         case EvenDeeperUI.PageStates.STATE_WAITING_FOR_DOM_LOADED:
-          showLoading();
+          showLoading("Waiting for article...");
           break;
         case EvenDeeperUI.PageStates.STATE_LOADING_ARTICLES:
-          showLoading();
+          showLoading("Extrompulating... ");
           break;
         case EvenDeeperUI.PageStates.STATE_LOADED:
           displayArticles(evendeeper.articles());

@@ -86,11 +86,6 @@ EvenDeeperUI.PageController = function(id, browser) {
     updateSidebar();
   };
   
-  function onBrowserShowPage() {
-    /*setState(EvenDeeperUI.PageStates.STATE_NO_PAGE);
-    updateSidebar();*/
-  };
-  
   function updateSidebar() {
     var sb = EvenDeeperUI.getSidebar();
     if (sb) sb.updateUI(getState(), _main);
@@ -104,7 +99,7 @@ EvenDeeperUI.PageController = function(id, browser) {
       onFinishedCalculatingSimilarities: onFinishedCalculatingSimilarities,
       onStartedCalculatingSimilarities: onStartedCalculatingSimilarities
     };
-    
+            
     dump("making new EvenDeeper.Main() in controller " + _id + "\n");
     
     _main = new EvenDeeper.Main();    
