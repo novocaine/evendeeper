@@ -91,7 +91,15 @@ EvenDeeperUI.PageController = function(id, browser) {
     if (sb) sb.updateUI(getState(), _main);
   };
   
-  function onDOMContentLoaded(e) {        
+  function onDOMContentLoaded(e) {            
+    // dont trigger for iframes
+    if (e.originalTarget instanceof HTMLDocument) {
+      var win = e.originalTarget.defaultView;
+      if (win.frameElement) {
+        return;
+      }
+    }
+        
     // conjure up context for EvenDeeper.Main; basically we pass it
     // a doc handle and some callbacks    
     var context = { 
