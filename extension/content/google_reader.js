@@ -49,13 +49,12 @@ EvenDeeper.AtomEntry = function(reader, xml) {
   this.xml = function() { return _xml; };
 };
 
-
 EvenDeeper.GoogleReader = function(main) {
   var googleLogin = {};
   var _atoms = [];
   var _grLabel = 'foreign%20policy';
   var _grItemsPerGet = 20;
-  var _grMaxTotalItems = 20;
+  var _grMaxTotalItems = 500;
   var _grItemCount = 0;
   var _loginEmail = null;
   var _loginPassword = null;
@@ -152,20 +151,33 @@ EvenDeeper.GoogleReader = function(main) {
       if (_grItemCount < _grMaxTotalItems) {
         grGetItemsXHR(continuation);
       } else {
-        _grGotAllItemsCallback();
+        gotAllItems();
       }
     } else {
       processReaderItems(xml_response);
+      gotAllItems();      
+    }
+    
+    function gotAllItems() {
+      EvenDeeper.GoogleReader.Cache.cacheAtoms(_atoms);
       _grGotAllItemsCallback();
     }
   };
     
   var _this = { 
     main: function() { return _main; },
-    
+        
     loadItems: function(callback) {
       _grGotAllItemsCallback = callback;      
-      grLogin(function() { grGetItems(); });
+      
+      // check if we have a non-expired cache copy in memory
+      if (EvenDeeper.GoogleReader.Cache.expired()) {        
+        grLogin(function() { grGetItems(); });
+      } else {
+        EvenDeeper.debug("using reader cache");
+        _atoms = EvenDeeper.GoogleReader.Cache.getAtoms();
+        _grGotAllItemsCallback();
+      }      
     },
     
     atoms: function(articles) { return _atoms; },
@@ -178,3 +190,63 @@ EvenDeeper.GoogleReader = function(main) {
   
   return _this;
 };
+
+EvenDeeper.GoogleReader.Cache = function() {
+  var _atoms = null;
+  var _cache_timestamp = null;
+
+  // one hour, in millseconds
+  var _max_age = 1000*60*60;
+  
+  return {
+    expired: function() {
+      if (_atoms === null) return true;
+      return ((new Date().getTime() - _cache_timestamp) > _max_age);
+    },
+    
+    cacheAtoms: function(atoms) {
+      _atoms = atoms;
+      _cache_timestamp = new Date().getTime();
+    },
+    
+    getAtoms: function() { return _atoms; }
+  };
+}();
+
+// EvenDeeper.GoogleReader.Cache = function(reader) {
+//   fucntion getProfileDirectory() {
+//     return Components.classes["@mozilla.org/file/directory_service;1"].  
+//                          getService(Components.interfaces.nsIProperties).  
+//                          get("ProfD", Components.interfaces.nsIFile);
+//   }
+//   
+//   function getCachePath() {
+//     var dir = getProfileDirectory();
+//     dir.append("EvenDeeper.GoogleReader.cache");
+//     return dir;
+//   }
+//   
+//   return {
+//     storeAtoms: function(atoms) {
+//       var cachePath = getCachePath();      
+//       var foStream = Components.classes["@mozilla.org/network/file-output-stream;1"].  
+//                                createInstance(Components.interfaces.nsIFileOutputStream);      
+//       
+//       // PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE; i.e. create if its not there and overwrite if it is      
+//       // 0666 is unix file perms      
+//       foStream.init(cachePath, 0x02 | 0x08 | 0x20, 0666, 0);   
+//       
+//       var converter = Components.classes["@mozilla.org/intl/converter-output-stream;1"].  
+//                                 createInstance(Components.interfaces.nsIConverterOutputStream);  
+// 
+//       converter.init(foStream, "UTF-8", 0, 0);  
+//       
+//       converter.writeString(data);  
+//       converter.close();  
+//     }
+//     
+//     getAtoms: function(atoms) {
+//       
+//     }
+//   };
+// }();
