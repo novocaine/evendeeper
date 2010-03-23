@@ -236,9 +236,10 @@ NLP.Corpus = function() {
 		  }
 		  
 		  _documents[document.id()] = document;
-		  ++_num_documents;
-		  
-		  // discard cached stuff
+		  ++_num_documents;		  		  
+		},
+		
+		clearCache: function() {
 		  _unionTerms = null;
 		  _idfs = {};		  
 		  
