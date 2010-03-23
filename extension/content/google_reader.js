@@ -54,7 +54,7 @@ EvenDeeper.GoogleReader = function(main) {
   var _atoms = [];
   var _grLabel = 'foreign%20policy';
   var _grItemsPerGet = 20;
-  var _grMaxTotalItems = 500;
+  var _grMaxTotalItems = 20;
   var _grItemCount = 0;
   var _loginEmail = null;
   var _loginPassword = null;
@@ -101,9 +101,7 @@ EvenDeeper.GoogleReader = function(main) {
   
   function processReaderItems(xml_response) {      
     // add all documents in response to corpus
-    xml_response.find("entry").each(function(index, entry) {
-      
-      
+    xml_response.find("entry").each(function(index, entry) {      
       // create and store article
       var atom = new EvenDeeper.AtomEntry(_this, _main.jQueryFn(entry));
             
@@ -128,7 +126,7 @@ EvenDeeper.GoogleReader = function(main) {
   
   function grGetItemsCallback(data) {    
     // convert responseText into a dom tree we can parse
-    var xml_response = main.jQueryFn(data);
+    var xml_response = _main.jQueryFn(data);
     
     // verify response
     if (xml_response.children()[0].tagName != "feed") {
@@ -160,14 +158,15 @@ EvenDeeper.GoogleReader = function(main) {
     
     function gotAllItems() {
       EvenDeeper.GoogleReader.Cache.cacheAtoms(_atoms);
-      _grGotAllItemsCallback();
+      _grGotAllItemsCallback(true);
     }
   };
     
   var _this = { 
     main: function() { return _main; },
         
-    loadItems: function(callback) {
+    loadItems: function(callback) {      
+      // calls back when items are gotten. passes a bool indicating whether items are new (true) or from cache (false)
       _grGotAllItemsCallback = callback;      
       
       // check if we have a non-expired cache copy in memory
@@ -176,7 +175,7 @@ EvenDeeper.GoogleReader = function(main) {
       } else {
         EvenDeeper.debug("using reader cache");
         _atoms = EvenDeeper.GoogleReader.Cache.getAtoms();
-        _grGotAllItemsCallback();
+        _grGotAllItemsCallback(false);
       }      
     },
     

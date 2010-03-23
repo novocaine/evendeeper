@@ -1,15 +1,15 @@
 // ff3 specific threading stuff yanked from https://developer.mozilla.org/en/The_Thread_Manager
-var mainThread = function(threadID, result, evendeeper) {
+var mainThread = function(threadID, sortedArticles, callback) {
   this.threadID = threadID;
-  this.result = result;
-  this.evendeeper = evendeeper;
+  this.sortedArticles = sortedArticles;
+  this.callback = callback;
 };
 
 mainThread.prototype = {
   run: function() {
     try {
       // send notification to even deeper that we're done
-      this.evendeeper.getOnFinishedCalculatingSimilarities()(this.evendeeper);
+      this.callback(this.sortedArticles);
     } catch(err) {
       Components.utils.reportError(err);
     }
@@ -25,19 +25,18 @@ mainThread.prototype = {
 };
 
 // takes as argument an id and an EvenDeeper.Main instance
-var workingThread = function(threadID, evendeeper) {
-  this.threadID = threadID;
-  this.result = 0;
-  this.evendeeper = evendeeper;
+var workingThread = function(threadID, context) {
+  this.threadID = threadID;  
+  this.context = context;
 };
 
 workingThread.prototype = {
   run: function() {
     try {
-      this.evendeeper.findArticleSimilarities();      
+      var sortedArticles = EvenDeeper.Similarity.findArticleSimilarities(this.context.currentDoc, this.context.articles, this.context.corpus);
       // notify main thread
-      this.evendeeper.mainThreadInstance().dispatch(new mainThread(this.threadID, this.result, this.evendeeper),
-        this.evendeeper.backgroundThreadInstance().DISPATCH_NORMAL);
+      this.context.mainThreadInstance.dispatch(new mainThread(this.threadID, sortedArticles, this.context.callback),
+        this.context.backgroundThreadInstance.DISPATCH_NORMAL);
     } catch(err) {
       Components.utils.reportError(err);
     }

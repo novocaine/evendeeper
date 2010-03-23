@@ -156,7 +156,7 @@ EvenDeeperSidebar = function() {
           showLoading("Extrompulating... ");
           break;
         case EvenDeeperUI.PageStates.STATE_LOADED:
-          displayArticles(evendeeper.articles());
+          displayArticles(evendeeper.sortedSimilarArticles());
           break;
       }
     }    

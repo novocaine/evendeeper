@@ -12,6 +12,7 @@
 	<script src="even_deeper.js" />
 	<script src="google_reader.js" />
 	<script src="worker_thread.js" />	
+	<script src="articles.js" />
 	
   <stringbundleset id="stringbundleset">
     <stringbundle id="evendeeper-strings" src="chrome://evendeeper/locale/evendeeper.properties"/>

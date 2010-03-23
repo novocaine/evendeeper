@@ -40,9 +40,10 @@ NLP.AccentRemover = function() {
 	
 }();
 
-NLP.Document = function(corpus, text) {
+NLP.Document = function(corpus, text, id) {
 	var _text = text;
 	var _corpus = corpus;
+	var _id = id;
 	
 	// associative array of the frequencies of each word
 	var _wordCounts = null;
@@ -61,6 +62,7 @@ NLP.Document = function(corpus, text) {
 	return {
 		text: function() { return _text; },
 		corpus: function() { return _corpus; },
+		id: function() { return _id; },
 		
 		wordCounts: function() {
 			if (_wordCounts === null) {				  
@@ -159,7 +161,8 @@ NLP.Document = function(corpus, text) {
 };
 
 NLP.Corpus = function() {  
-	var _documents = [];
+	var _documents = {};
+	var _num_documents = 0;
 	var _unionTerms = null;
 	var _idfs = {};
 	
@@ -169,16 +172,16 @@ NLP.Corpus = function() {
 		  if (!(_idfs.hasOwnProperty(term))) {		    		    
 		    var count = 0;
   			// find num docs where the term appears
-  			for (var i in _documents) {				
-  				if (_documents[i].wordCounts().hasOwnProperty(term)) { ++count; }					
-  			}
-			
+  			jQuery.each(_documents, function(id, doc) {
+  				if (doc.wordCounts().hasOwnProperty(term)) { ++count; }					
+  			});
+
   			if (count == 0) { 
   			  console.log("warning: idf is 0 for term " + term);
   			  return 0;
   		  }
 			
-  			_idfs[term] = Math.log(_documents.length / count);  			
+  			_idfs[term] = Math.log(_num_documents / count);  			
   		}
   		
   		return _idfs[term];
@@ -226,15 +229,26 @@ NLP.Corpus = function() {
 		},
 		
 		addDocument: function(document) {	
-		  _documents.push(document);
+		  // do nothing if we already have this doc
+		  if (_documents.hasOwnProperty(document.id())) {
+		    NLP.Debug.msg("already have doc with id " + document.id());
+		    return;
+		  }
+		  
+		  _documents[document.id()] = document;
+		  ++_num_documents;
 		  
 		  // discard cached stuff
 		  _unionTerms = null;
 		  _idfs = {};		  
 		  
-		  jQuery.each(_documents, function(index, doc) {
+		  jQuery.each(_documents, function(id, doc) {
 		    doc.clearTfIdfs();
 		  });
+		},
+		
+		getDocument: function(id) {
+		  return _documents[id];
 		}
 	};
 };
