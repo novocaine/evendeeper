@@ -76,16 +76,23 @@ EvenDeeperUI.PageController = function(id, browser) {
   function setState(state) { _state = state; };  
   function getState() { return _state; };
   
-  function onFinishedCalculatingSimilarities(evendeeper) {
-    dump("controller " + id + " got onFinishedCalculatingSimilarities");
-    
-    setState(EvenDeeperUI.PageStates.STATE_LOADED);
-    updateSidebar();
+  function onFinishedCalculatingSimilarities(page) {
+    // have to check whether its still the same page
+    // as we create a new page instance each time the dom is reloaded;
+    // this could be an old page finishing
+    if (page === _page) {
+      setState(EvenDeeperUI.PageStates.STATE_LOADED);
+      updateSidebar();
+    } else {
+      dump("ignoring onFinishedCalculatingSimilarities, unloaded");
+    }
   };
   
-  function onStartedCalculatingSimilarities(evendeeper) {
-    setState(EvenDeeperUI.PageStates.STATE_LOADING_ARTICLES);
-    updateSidebar();
+  function onStartedCalculatingSimilarities(page) {
+    if (page === _page) {
+      setState(EvenDeeperUI.PageStates.STATE_LOADING_ARTICLES);
+      updateSidebar();
+    }
   };
   
   function isSelectedTab() {
@@ -118,9 +125,23 @@ EvenDeeperUI.PageController = function(id, browser) {
             
     dump("making new EvenDeeper.Page() in controller " + _id + "\n");
     
+    browser.addEventListener("unload", onUnload, true);
+    
     _page = new EvenDeeper.Page(context);
     _page.process(context);    
   };
+  
+  function onUnload(e) {
+    if (e.originalTarget instanceof HTMLDocument) {
+      var win = e.originalTarget.defaultView;
+      if (win.frameElement) {
+        return;
+      }
+    }
+    
+    dump("unload on page " + _id + "\n");
+    _page.setUnloaded();
+  }
     
   browser.addEventListener("DOMContentLoaded", onDOMContentLoaded, true);  
   updateSidebar();

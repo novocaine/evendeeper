@@ -26,8 +26,8 @@ EvenDeeper.PageTypes.TestHarness = function(main) {
       main.jQueryFn("#body p").each(function() {
         body = body + main.jQueryFn(this).text() + "\n";
       });
-      
-      return new EvenDeeper.Article(main, "", main.jQueryFn("#title")[0].innerHTML, body, main.contextDoc().location.href);
+                  
+      return new EvenDeeper.Article(main, "", main.jQueryFn("#title")[0].innerHTML, body, main.contextDoc().documentURI);
     }
   };
 };
@@ -85,16 +85,13 @@ EvenDeeper.PageProcessor = function() {
     if (_pageQueue.length == 0) return null;
     return _pageQueue.shift();
   }
-      
-  // called by the worker thread when its done, on the main thread.
-  function workerThreadFinished(sortedArticles) {                
-    dump("**** workerThreadFinished\n\n");
-    for (var i=0; i < sortedArticles.length; ++i) {
-      dump(sortedArticles[i].article.title() + "\t" + sortedArticles[i].similarity + "\n");
+  
+  function finishProcessing(sortedArticles) {    
+    if (sortedArticles) {
+      _currentPage.onProcessingDone(sortedArticles);
     }
     
-    _busy = false;
-    _currentPage.onProcessingDone(sortedArticles);
+    _busy = false;    
     _currentPage = null;
     
     // process next page in queue
@@ -102,6 +99,16 @@ EvenDeeper.PageProcessor = function() {
     if (page) {
       _this.process(page);
     }
+  }
+      
+  // called by the worker thread when its done, on the main thread.
+  function workerThreadFinished(sortedArticles) {                
+    dump("**** workerThreadFinished\n\n");
+    for (var i=0; i < sortedArticles.length; ++i) {
+      dump(sortedArticles[i].article.title() + "\t" + sortedArticles[i].similarity + "\n");
+    }
+        
+    finishProcessing(sortedArticles);
   };
   
   function startProcessing() {
@@ -160,6 +167,12 @@ EvenDeeper.PageProcessor = function() {
       
       _busy = true;
       _currentPage = page;
+      
+      if (_currentPage.isUnloaded()) {
+        EvenDeeper.debug("dropping page, unloaded");
+        finishProcessing(null);
+        return;
+      }
             
       if (EvenDeeper.ArticleStore.pastExpiry()) {
         EvenDeeper.ArticleStore.updateArticles(page, startProcessing);
@@ -182,6 +195,7 @@ EvenDeeper.Page = function(context) {
   var _onFinishedCalculatingSimilarities = context.onFinishedCalculatingSimilarities;
   var _onStartedCalculatingSimilarities = context.onStartedCalculatingSimilarities;
   var _htmlParser = null;
+  var _unloaded = false;
   
   _this = {
     htmlParser: function() {
@@ -215,7 +229,7 @@ EvenDeeper.Page = function(context) {
       }
       
       // notify delegate of our progress; basically this is confirmation that yeah, we're going to try processing this page
-      _onStartedCalculatingSimilarities();
+      _onStartedCalculatingSimilarities(_this);
                 
       // go do the number crunching
       EvenDeeper.PageProcessor.process(_this);
@@ -229,8 +243,11 @@ EvenDeeper.Page = function(context) {
     
     onProcessingDone: function(scores) {
       _scores = scores;
-      _onFinishedCalculatingSimilarities(_scores);    
-    }  
+      _onFinishedCalculatingSimilarities(_this);    
+    },
+    
+    setUnloaded: function() { _unloaded = true; },
+    isUnloaded: function() { return _unloaded; }
   };
   
   return _this;
