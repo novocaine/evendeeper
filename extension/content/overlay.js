@@ -15,9 +15,6 @@ EvenDeeperUI.OverlayController = function() {
     for (var i=0; i < gBrowser.browsers.length; ++i) {
       initController(gBrowser.browsers[i]);
     }
-    
-    _main = new EvenDeeper.Main();
-    _main.init();
   };  
     
   function onMenuItemCommand(e) {

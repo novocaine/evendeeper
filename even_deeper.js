@@ -6,7 +6,7 @@ EvenDeeper.debugging_enabled = true;
 
 EvenDeeper.debug = function(msg) { 
   if (EvenDeeper.debugging_enabled) {
-    //console.log(msg); 
+    //dump(msg + "\n");
     Firebug.Console.log(msg);
   }
 };
@@ -181,8 +181,17 @@ EvenDeeper.Page = function(context) {
   var _this = null;  
   var _onFinishedCalculatingSimilarities = context.onFinishedCalculatingSimilarities;
   var _onStartedCalculatingSimilarities = context.onStartedCalculatingSimilarities;
-        
+  var _htmlParser = null;
+  
   _this = {
+    htmlParser: function() {
+      if (!_htmlParser) {
+        _htmlParser = new EvenDeeper.HtmlParser(_this);
+      }
+      
+      return _htmlParser;
+    },
+    
     // secret sauce to get jQuery working using the correct doc. use this instead of $.
     jQueryFn: function(selector, context) {
       return new jQuery.fn.init(selector, context || _contextDoc);

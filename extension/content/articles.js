@@ -4,83 +4,80 @@ EvenDeeper.Article = function(main, source, title, body, url) {
   var _url = url;
   var _source = source;
   var _updatedBodyCallback = null;
-  var _enableUpdatingFromSource = false;
-  
-  // given an article with an insigificant body, visits its url to get the full article   
-  function updateBodyFromSource() {
-    EvenDeeper.debug("updating body of " + url);
+  var _enableUpdatingFromSource = true;
+  var _updatedFromSource = false;
     
-    GM_xmlhttpRequest({
-      method: 'GET', 
-      url: _url,
-      headers: { 
-        'User-Agent': EvenDeeper.userAgent
-      },        
-      onload: yankPage_callback
-    });
-  };
-  
-  function yankPage_callback(response) {
-    if (response.status == 200) {
-      var page = main.jQueryFn(response.responseText);
-      var title = page.find("head title").text();
-      var body = null;
-
-      // generate body text 
-      // strategy is to look for the first node containing > 1000 chars worth of text
-      page.find("p").each(function(index, n) {      
-        var node = main.jQueryFn(n);
-        if (node.parent().text().length > 500) {        
-          _body = node.parent().children("p").text();        
-          //EvenDeeper.debug(_body);
-          return false;
-        }
-      });        
-    } else {
-      EvenDeeper.debug("got response code " + response.status + ", not updating body");
-    }
-    
-    _updatedBodyCallback();
-  };
-      
   return {
     title: function() { return _title; },
     body: function() { return _body; },
     url: function() { return _url; },
     source: function() { return _source; },
 
-    updateBodyFromSourceIfNecessary: function(callback) {      
-      if (_body.length < 1000 && _enableUpdatingFromSource) {
-        _updatedBodyCallback = callback;
-        updateBodyFromSource();
-      } else {
+    // given an article with an insigificant body, visits its url to get the full article   
+    updateBodyFromSourceIfNecessary: function(page, callback) {
+      if (_body.length < 1000 && _enableUpdatingFromSource && !_updatedFromSource) {
+
+        EvenDeeper.debug("updating body of " + url);    
+        
+        page.htmlParser().loadUrl(url, function(doc) {
+          // doc === null means there was some problem loading the page
+          if (doc) {
+            var ps = main.jQueryFn("p", doc);          
+            var body = null;
+
+            // generate body text 
+            // strategy is to look for the first node containing > 1000 chars worth of text
+            ps.each(function(index, n) {                                  
+              var node = main.jQueryFn(n);
+            
+              // EvenDeeper.debug("parent text: " + node.parent().text());
+            
+              if (node.parent().children("p").text().length > 500) {        
+                _body = node.parent().children("p").text();        
+                // EvenDeeper.debug("updated body to ------->" + _body);
+                return false;
+              }
+            });
+          
+            // set this flag to avoid this being called again in the future
+            _updatedFromSource = true;
+          }
+          
+          callback();
+        });
+        
+      } else {        
+        // body too big or source yanking disabled
         callback();
       }
     }
   };
 };
 
+// utility class for calling article update in a loop for all articles
 EvenDeeper.ArticleBodyUpdater = function() {
   var _index = 0;
   var _articles;
   var _doneCallback;
+  var _page;
 
   function updatedBodyCallback() {
     ++_index;
     
     if (_index < _articles.length) {
-      _articles[_index].updateBodyFromSourceIfNecessary(updatedBodyCallback); 
+      _articles[_index].updateBodyFromSourceIfNecessary(_page, updatedBodyCallback); 
     } else {
       _doneCallback(_articles);
     }
   };
     
   return {
-    updateArticles: function(articles, doneCallback) {            
+    updateArticles: function(page, articles, doneCallback) {            
       if (articles.length > 0) {
         _articles = articles;
         _doneCallback = doneCallback;
-        _articles[0].updateBodyFromSourceIfNecessary(updatedBodyCallback); 
+        _page = page;
+        _articles[0].updateBodyFromSourceIfNecessary(_page, updatedBodyCallback); 
       } else {
         doneCallback(articles);
       }
@@ -142,7 +139,7 @@ EvenDeeper.ArticleStore = function() {
       });
     
       // update bodies from articles sources
-      new EvenDeeper.ArticleBodyUpdater().updateArticles(newArticles, onUpdatedArticles);
+      new EvenDeeper.ArticleBodyUpdater().updateArticles(_main, newArticles, onUpdatedArticles);
       
     } else {
       _doneCallback();

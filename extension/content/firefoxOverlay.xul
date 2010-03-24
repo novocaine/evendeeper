@@ -13,6 +13,7 @@
 	<script src="google_reader.js" />
 	<script src="worker_thread.js" />	
 	<script src="articles.js" />
+	<script src="html_parser.js" />
 	
   <stringbundleset id="stringbundleset">
     <stringbundle id="evendeeper-strings" src="chrome://evendeeper/locale/evendeeper.properties"/>
@@ -38,6 +39,10 @@
                  sidebartitle="&evendeeper.title;"
                  oncommand="toggleSidebar('viewEvenDeeperSidebar');" />
   </broadcasterset>
+	
+	<vbox hidden="false" height="0">
+			<iframe type="content" src="" name="evendeeper-iframe" hidden="false" id="evendeeper-iframe" height="0"/>
+	</vbox>
 </overlay>
 
 
