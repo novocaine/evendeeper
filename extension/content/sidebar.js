@@ -56,41 +56,49 @@ EvenDeeperSidebar = function() {
     vbox.appendChild(loading);
   };
   
-  function displayArticles(articles) {
+  function displayArticles(scores) {
+    dump("\n****displayArticles " + scores.length + "\n\n");
+        
     clearSidebar();                
     // re-add it
     var vbox = createVbox();
     vbox.setAttribute("style", "overflow-y: auto");
 
     _num_hidden_articles = 0;
+    var _max_articles = 20;
     
-    for (var i=0; i < articles.length; ++i) {                
-      var sim = articles[i].similarityToCurrentArticle; 
+    for (var i=0; i < _max_articles; ++i) {                
+      /* dump(articles[i].title() + "\t" + articles[i].similarityToCurrentArticle + "\n");
+      dump(articles[i].body()); */
       
-      if (sim < _discard_threshold) {
+      var sim = scores[i].similarity; 
+      
+      /* if (sim < _discard_threshold) {
         break;
-      }
+      } */
                       
       var container = document.createElement("vbox");
       vbox.appendChild(container);
       
       // hide the entry if its below the hide threshold
-      if (sim < _hide_threshold) {
+      /* if (sim < _hide_threshold) {
         container.style.display = "none";
         container.setAttribute("class", "below_threshold");
         ++_num_hidden_articles;
-      }
+      } */
               
       var link = document.createElement("label");
       // using text nodes rather than value attr causes text to wrap
-      var text = document.createTextNode(articles[i].title());
+      var score = Math.round(scores[i].similarity * 100) / 100;
+      
+      var text = document.createTextNode(scores[i].article.title() + " (" + score + ")");
       link.appendChild(text);  
-      link.setAttribute("href", articles[i].url());
+      link.setAttribute("href", scores[i].article.url());
       link.setAttribute("class", "text-link");
       link.style.marginBottom = "1em";        
       
       var source = document.createElement("label");
-      text = document.createTextNode(articles[i].source());
+      text = document.createTextNode(scores[i].article.source());
       source.appendChild(text);
       source.style.fontWeight = "bold";
               
@@ -108,7 +116,7 @@ EvenDeeperSidebar = function() {
       updateMoreArticlesLink(false);
     }
     
-    if (articles.length === 0) {
+    if (scores.length === 0) {
       var no_articles_found = document.createElement("label");
       no_articles_found.setAttribute("value", "No articles found.");
       vbox.appendChild(no_articles_found);
@@ -156,7 +164,7 @@ EvenDeeperSidebar = function() {
           showLoading("Extrompulating... ");
           break;
         case EvenDeeperUI.PageStates.STATE_LOADED:
-          displayArticles(evendeeper.sortedSimilarArticles());
+          displayArticles(evendeeper.scores());
           break;
       }
     }    

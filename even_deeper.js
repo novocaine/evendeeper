@@ -64,95 +64,124 @@ EvenDeeper.PageTypes.Guardian = function(main) {
   };
 };
 
-EvenDeeper.Main = function() {
-  var _currentDoc = null;
-  var _currentPage = null;
-  
-  var _max_nlp_considered_chars = 1000;
-  
+// singleton processor; only allows one process at a time for simplicity - the internals aren't threadsafe
+// or even asynchronously safe in the sense of running multiple pages at the same time.
+
+EvenDeeper.PageProcessor = function() {
+  var _busy = false;  
   var _useWorkerThread = true;    
   var _backgroundThreadInstance = null;
   var _mainThreadInstance = null;
-  var _sortedSimilarArticles = null;
-  
+  var _currentDoc = null;
   var _this = null;
-  var _onFinishedCalculatingSimilarities = null;
-  var _contextDoc = null;  
+  var _currentPage = null;
+  var _pageQueue = [];
   
-  function corpus() {
-    return EvenDeeper.Main.corpusInstance;
+  function enQueuePage(page) {
+    _pageQueue.push(page);
   }
+  
+  function deQueuePage() {
+    if (_pageQueue.length == 0) return null;
+    return _pageQueue.shift();
+  }
+      
+  // called by the worker thread when its done, on the main thread.
+  function workerThreadFinished(sortedArticles) {                
+    dump("**** workerThreadFinished\n\n");
+    for (var i=0; i < sortedArticles.length; ++i) {
+      dump(sortedArticles[i].article.title() + "\t" + sortedArticles[i].similarity + "\n");
+    }
     
-  function nlpDocFromArticle(article) {
-    // we truncate the document because usually the key bits of the article are at the top
-    // and this reduces the bias towards large documents
-    //return new NLP.Document(article.body().substring(0, _max_nlp_considered_chars));
-    return new NLP.Document(corpus(), article.body(), article.url());
+    _busy = false;
+    _currentPage.onProcessingDone(sortedArticles);
+    _currentPage = null;
+    
+    // process next page in queue
+    var page = deQueuePage();
+    if (page) {
+      _this.process(page);
+    }
   };
   
-  function updatedArticles() {                
-    EvenDeeper.debug("done updating");
+  function startProcessing() {
+    // see if we already have a document for the current page. 
+    //
+    // note we don't actually use the article object created here (i.e. put it in the article store), its
+    // just used as a convenient object holding appropriate data
+    var article = _currentPage.pageType().createArticleFromCurrentPage();      
+    _currentDoc = EvenDeeper.corpusInstance.getDocument(article.url());
 
-    // populate corpus    
-    jQuery.each(EvenDeeper.ArticleStore.articles(), function(index, article) {
-      // create document from article and add to corpus; stash doc in article
-      article.nlpdoc = nlpDocFromArticle(article);
-      corpus().addDocument(article.nlpdoc);      
-    });
+    if (!_currentDoc) {        
+      // we don't, make one. note we add it directly to the corpus, not
+      // to the article store - which is reserved for articles from our backing rss feeds.
+      _currentDoc = EvenDeeper.ArticleStore.nlpDocFromArticle(article);
+      EvenDeeper.corpusInstance.addDocument(_currentDoc);    
+    }     
 
-    if (_useWorkerThread) {            
+    if (_useWorkerThread) {                        
       // spawn a thread to process the articles. the trick is we don't want multiple threads clobbering
       // the NLP component at once - it's not threadsafe - so we put a big dumb lock around the whole thing.
-      //
-      // we spin here until _backgroundThreadInstance becomes null. the spinning doesn't suffer a race
-      // condition because this code can only be executed by the main thread.
-                  
+      //                  
       var thread = Components.classes["@mozilla.org/thread-manager;1"]
                               .getService(Components.interfaces.nsIThreadManager)
                               .currentThread;
-      
-      // make a copy of the article array in ArticleStore to pass to the similarity tester; we don't actually
-      // need to copy the articles themselves (as they are immutable after they've been put in ArticleStore)
-      // but the actual contents of the array may be altered from the main thread while a worker thread is running
-      var articles = [];
-      
-      jQuery.each(EvenDeeper.ArticleStore.articles(), function(i, article) {
-        articles.push(article);
-      });
-      
-      while (_backgroundThreadInstance) {
-        thread.processNextEvent(true);
-      }
-      
+                              
+      dump("***** starting worker thread\n\n");
+
       _backgroundThreadInstance = Components.classes["@mozilla.org/thread-manager;1"].getService().newThread(0);
       _mainThreadInstance = Components.classes["@mozilla.org/thread-manager;1"].getService().mainThread;
-      
+
       var context = {
-        articles: articles,
+        articles: EvenDeeper.ArticleStore.articles(),
         callback: workerThreadFinished,
         mainThreadInstance: _mainThreadInstance,
         backgroundThreadInstance: _backgroundThreadInstance,
-        corpus: EvenDeeper.Main.corpusInstance,
+        corpus: EvenDeeper.corpusInstance,
         currentDoc: _currentDoc
       };
-      
+
       _backgroundThreadInstance.dispatch(new workingThread(1, context), _backgroundThreadInstance.DISPATCH_NORMAL);
+
     } else {
-      _sortedSimilarArticles = EvenDeeper.Similarity.findArticleSimilarities(_currentDoc, EvenDeeper.ArticleStore.articles(), EvenDeeper.Main.corpusInstance);
-      _onFinishedCalculatingSimilarities(_this);
-    }                    
-  };   
+      EvenDeeper.Similarity.findArticleSimilarities(_currentDoc, EvenDeeper.ArticleStore.articles(), EvenDeeper.corpusInstance);
+      workerThreadFinished();
+    }
+  };
   
-  // called by the worker thread when its done, on the main thread.
-  function workerThreadFinished(sortedArticles) {
-    EvenDeeper.debug("workerThreadFinished");
+  _this = {
+    isBusy: function() { return _busy; },
     
-    // setting this to null allows any other waiters to run their thread
-    _backgroundThreadInstance = null;
-    _sortedSimilarArticles = sortedArticles;
-    _onFinishedCalculatingSimilarities(_this);
-  };   
-    
+    process: function(page) {
+      if (_busy) {
+        enQueuePage(page);        
+        return;
+      }
+      
+      _busy = true;
+      _currentPage = page;
+            
+      if (EvenDeeper.ArticleStore.pastExpiry()) {
+        EvenDeeper.ArticleStore.updateArticles(page, startProcessing);
+        return;
+      }
+      
+      startProcessing();                    
+    }    
+  };
+  
+  return _this;
+}();
+
+EvenDeeper.Page = function(context) {
+  var _currentDoc = context.currentDoc;
+  var _contextDoc = context.doc;
+  var _currentPageType = null;
+  var _scores = null;
+  var _this = null;  
+  var _onFinishedCalculatingSimilarities = context.onFinishedCalculatingSimilarities;
+  var _onStartedCalculatingSimilarities = context.onStartedCalculatingSimilarities;
+        
   _this = {
     // secret sauce to get jQuery working using the correct doc. use this instead of $.
     jQueryFn: function(selector, context) {
@@ -164,44 +193,35 @@ EvenDeeper.Main = function() {
     // .doc, a pointer to the actual document object for the page to operate on
     // .onFinishedCalculatingSimilarities, a callback that will be called with EvenDeeper.Article objects when done
     // .onStartedCalculatingSimilarities, a callback that will be called with no arguments only if we start
-    
-    init: function(context) {       
-      _contextDoc = context.doc;
-      _onFinishedCalculatingSimilarities = context.onFinishedCalculatingSimilarities;
-      
+    process: function() {        
       // init for the correct page type
-      
       if (_contextDoc.location.href.match(/guardian.co.uk/) && _contextDoc.getElementById("article-wrapper")) {
-        _currentPage = new EvenDeeper.PageTypes.Guardian(this);
+        _currentPageType = new EvenDeeper.PageTypes.Guardian(this);
         EvenDeeper.debug("initialized as guardian");
       } else if (_contextDoc.location.href.match(/deckardsoftware.com/)) {
-        _currentPage = new EvenDeeper.PageTypes.TestHarness(this);    
+        _currentPageType = new EvenDeeper.PageTypes.TestHarness(this);    
         EvenDeeper.debug("initialized as harness");
       } else {
         return;
       }
       
-      // notify delegates of our progress
-      context.onStartedCalculatingSimilarities();
-                      
-      // see if we already have a document for the current page
-      var article = _currentPage.createArticleFromCurrentPage();      
-      _currentDoc = corpus().getDocument(article.url());
-      
-      if (!_currentDoc) {
-        // we don't, make one
-        _currentDoc = nlpDocFromArticle(article);
-        corpus().addDocument(_currentDoc);    
-      }
-      
-      EvenDeeper.ArticleStore.updateArticles(_this, updatedArticles);      
-    }, 
+      // notify delegate of our progress; basically this is confirmation that yeah, we're going to try processing this page
+      _onStartedCalculatingSimilarities();
                 
-    sortedSimilarArticles: function() { return _sortedSimilarArticles; },
+      // go do the number crunching
+      EvenDeeper.PageProcessor.process(_this);
+    },          
+    
+    scores: function() { return _scores; },
     currentDoc: function() { return _currentDoc; },
     mainThreadInstance: function() { return _mainThreadInstance; },
-    backgroundThreadInstance: function() { return _backgroundThreadInstance; },
-    contextDoc: function() { return _contextDoc; }
+    contextDoc: function() { return _contextDoc; },
+    pageType: function() { return _currentPageType; },
+    
+    onProcessingDone: function(scores) {
+      _scores = scores;
+      _onFinishedCalculatingSimilarities(_scores);    
+    }  
   };
   
   return _this;
@@ -219,30 +239,26 @@ EvenDeeper.Similarity = {
     
     var start = new Date().getTime();
     
-    // we don't want to disturb the ordering of the original articles collection
-    var sortedArticles = [];
+    // generate 
+    var scores = [];
     
     // compare reader-sourced articles to current article, stashing similarity in the article object
     jQuery.each(articles, function(index, article) {        
-      article.similarityToCurrentArticle = corpus.docSimilarity(currentDoc, article.nlpdoc);
-      sortedArticles.push(article);
+      var sim = corpus.docSimilarity(currentDoc, article.nlpdoc);
+      scores.push({ article: article, similarity: sim });
     });                
 
-    sortedArticles.sort(function(article_a, article_b) {
-      return (article_b.similarityToCurrentArticle - article_a.similarityToCurrentArticle);
+    scores.sort(function(score_a, score_b) {
+      return (score_b.similarity - score_a.similarity);
     });
 
     var end = new Date().getTime();
 
-    dump("similarity time: " + (end - start));
+    dump("similarity time: " + (end - start) + "\n\n");
     
-    return sortedArticles;
+    return scores;
   }
 };
 
 // singleton corpus
-EvenDeeper.Main.corpusInstance = new NLP.Corpus();
-
-/*(function() {
-  EvenDeeper.Main.init();
-}());*/
+EvenDeeper.corpusInstance = new NLP.Corpus();

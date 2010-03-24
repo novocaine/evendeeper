@@ -231,7 +231,7 @@ NLP.Corpus = function() {
 		addDocument: function(document) {	
 		  // do nothing if we already have this doc
 		  if (_documents.hasOwnProperty(document.id())) {
-		    NLP.Debug.msg("already have doc with id " + document.id());
+		    //NLP.Debug.msg("already have doc with id " + document.id());
 		    return;
 		  }
 		  

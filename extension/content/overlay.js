@@ -1,6 +1,7 @@
 EvenDeeperUI.OverlayController = function() {  
   var _controllers = {};
   var _nextControllerId = 0;
+  var _main = null;
   
   // startup and rego
   function onWindowLoad() {    
@@ -11,11 +12,12 @@ EvenDeeperUI.OverlayController = function() {
     gBrowser.tabContainer.addEventListener("TabOpen", onTabAdd, false);
     gBrowser.tabContainer.addEventListener("TabSelect", onTabSelect, false);
     
-    initController(gBrowser.selectedBrowser);
+    for (var i=0; i < gBrowser.browsers.length; ++i) {
+      initController(gBrowser.browsers[i]);
+    }
     
-    // register for events
-    // var appcontent = gBrowser.contentDocument;
-    // gBrowser.addEventListener("DOMContentLoaded", onDOMContentLoaded, true);
+    _main = new EvenDeeper.Main();
+    _main.init();
   };  
     
   function onMenuItemCommand(e) {
@@ -69,14 +71,17 @@ EvenDeeperUI.getSidebar = function() {
 };
 
 EvenDeeperUI.PageController = function(id, browser) {
-  var _main = null;  
+  var _page = null;  
   var _state = EvenDeeperUI.PageStates.STATE_NO_PAGE;
   var _id = id;
+  var _browser = browser;
   
   function setState(state) { _state = state; };  
   function getState() { return _state; };
   
   function onFinishedCalculatingSimilarities(evendeeper) {
+    dump("controller " + id + " got onFinishedCalculatingSimilarities");
+    
     setState(EvenDeeperUI.PageStates.STATE_LOADED);
     updateSidebar();
   };
@@ -86,9 +91,15 @@ EvenDeeperUI.PageController = function(id, browser) {
     updateSidebar();
   };
   
+  function isSelectedTab() {
+    return (_browser === gBrowser.selectedBrowser);
+  }
+  
   function updateSidebar() {
     var sb = EvenDeeperUI.getSidebar();
-    if (sb) sb.updateUI(getState(), _main);
+    if (sb && isSelectedTab()) {
+      sb.updateUI(getState(), _page);
+    }
   };
   
   function onDOMContentLoaded(e) {            
@@ -108,10 +119,10 @@ EvenDeeperUI.PageController = function(id, browser) {
       onStartedCalculatingSimilarities: onStartedCalculatingSimilarities
     };
             
-    dump("making new EvenDeeper.Main() in controller " + _id + "\n");
+    dump("making new EvenDeeper.Page() in controller " + _id + "\n");
     
-    _main = new EvenDeeper.Main();    
-    _main.init(context);    
+    _page = new EvenDeeper.Page(context);
+    _page.process(context);    
   };
     
   browser.addEventListener("DOMContentLoaded", onDOMContentLoaded, true);  

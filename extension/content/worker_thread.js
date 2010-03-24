@@ -1,7 +1,7 @@
 // ff3 specific threading stuff yanked from https://developer.mozilla.org/en/The_Thread_Manager
-var mainThread = function(threadID, sortedArticles, callback) {
+var mainThread = function(threadID, scores, callback) {
   this.threadID = threadID;
-  this.sortedArticles = sortedArticles;
+  this.scores = scores;
   this.callback = callback;
 };
 
@@ -9,7 +9,7 @@ mainThread.prototype = {
   run: function() {
     try {
       // send notification to even deeper that we're done
-      this.callback(this.sortedArticles);
+      this.callback(this.scores);
     } catch(err) {
       Components.utils.reportError(err);
     }
@@ -33,9 +33,9 @@ var workingThread = function(threadID, context) {
 workingThread.prototype = {
   run: function() {
     try {
-      var sortedArticles = EvenDeeper.Similarity.findArticleSimilarities(this.context.currentDoc, this.context.articles, this.context.corpus);
+      var scores = EvenDeeper.Similarity.findArticleSimilarities(this.context.currentDoc, this.context.articles, this.context.corpus);
       // notify main thread
-      this.context.mainThreadInstance.dispatch(new mainThread(this.threadID, sortedArticles, this.context.callback),
+      this.context.mainThreadInstance.dispatch(new mainThread(this.threadID, scores, this.context.callback),
         this.context.backgroundThreadInstance.DISPATCH_NORMAL);
     } catch(err) {
       Components.utils.reportError(err);

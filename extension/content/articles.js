@@ -90,10 +90,11 @@ EvenDeeper.ArticleBodyUpdater = function() {
 
 EvenDeeper.ArticleStore = function() {
   var _main = null;
-  var _finishedCallback = null;
+  var _doneCallback = null;
   var _googleReader = null;
   var _articles = {};
-  
+  var _max_nlp_considered_chars = 1000;
+    
   function addArticle(article) {
     // dont add if we already have an article with this url
     if (hasArticle()) {
@@ -141,22 +142,44 @@ EvenDeeper.ArticleStore = function() {
       });
     
       // update bodies from articles sources
-      new EvenDeeper.ArticleBodyUpdater().updateArticles(newArticles, _finishedCallback);
+      new EvenDeeper.ArticleBodyUpdater().updateArticles(newArticles, onUpdatedArticles);
+      
     } else {
-      _finishedCallback();
+      _doneCallback();
     }
+  };
+      
+  function onUpdatedArticles() {
+    // populate corpus with the finalised articles. note we wait before
+    // the article is definitely finalised (including the update phase)
+    // before actually adding it to the corpus; so once its in the corpus its immutable.    
+    jQuery.each(_articles, function(index, article) {
+      // create document from article and add to corpus; stash doc in article
+      article.nlpdoc = EvenDeeper.ArticleStore.nlpDocFromArticle(article);
+      EvenDeeper.corpusInstance.addDocument(article.nlpdoc);
+    });    
+    
+    _doneCallback();
   };
           
   return {        
     updateArticles: function(main, finishedCallback) {
       _main = main;
-      _finishedCallback = finishedCallback;
+      _doneCallback = finishedCallback;
       // get new articles from google reader
       _googleReader = new EvenDeeper.GoogleReader(main);
       _googleReader.loadItems(grGotAllItems);      
     },
     
-    articles: function() { return _articles; }
+    pastExpiry: function() { return EvenDeeper.GoogleReader.Cache.expired(); },
+    
+    articles: function() { return _articles; },
+    
+    nlpDocFromArticle: function(article) {
+      // we truncate the document because usually the key bits of the article are at the top
+      // and this reduces the bias towards large documents
+      //return new NLP.Document(article.body().substring(0, _max_nlp_considered_chars));
+      return new NLP.Document(EvenDeeper.corpusInstance, article.body(), article.url());
+    }    
   };
 }();
-
