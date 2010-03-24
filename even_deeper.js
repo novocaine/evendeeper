@@ -192,10 +192,12 @@ EvenDeeper.Page = function(context) {
   var _currentPageType = null;
   var _scores = null;
   var _this = null;  
-  var _onFinishedCalculatingSimilarities = context.onFinishedCalculatingSimilarities;
-  var _onStartedCalculatingSimilarities = context.onStartedCalculatingSimilarities;
   var _htmlParser = null;
   var _unloaded = false;
+  
+  var _onFinishedCalculatingSimilarities = context.onFinishedCalculatingSimilarities;
+  var _onStartedCalculatingSimilarities = context.onStartedCalculatingSimilarities;
+  var _onWontProcessThisPage = context.onWontProcessThisPage;
   
   _this = {
     htmlParser: function() {
@@ -225,6 +227,7 @@ EvenDeeper.Page = function(context) {
         _currentPageType = new EvenDeeper.PageTypes.TestHarness(this);    
         EvenDeeper.debug("initialized as harness");
       } else {
+        _onWontProcessThisPage(_this);
         return;
       }
       

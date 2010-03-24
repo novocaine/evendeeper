@@ -94,6 +94,7 @@ EvenDeeperSidebar = function() {
       var text = document.createTextNode(scores[i].article.title() + " (" + score + ")");
       link.appendChild(text);  
       link.setAttribute("href", scores[i].article.url());
+      link.setAttribute("alt", scores[i].article.body());
       
       link.addEventListener("click", function(e) {
         var mainWindow = window.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
@@ -178,6 +179,9 @@ EvenDeeperSidebar = function() {
           break;
         case EvenDeeperUI.PageStates.STATE_LOADED:
           displayArticles(evendeeper.scores());
+          break;
+        case EvenDeeperUI.PageStates.STATE_WONT_LOAD_THIS_PAGE:
+          clearSidebar();
           break;
       }
     }    

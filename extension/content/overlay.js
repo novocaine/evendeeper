@@ -34,7 +34,7 @@ EvenDeeperUI.OverlayController = function() {
     if (!browser.hasAttribute("EvenDeeper.ControllerIndex")) {
       dump("making new controller with index " + _nextControllerId + "\n");
       // add new controller for initial window if there is one
-      var controller = new EvenDeeperUI.PageController(_nextControllerId, browser);
+      var controller = new EvenDeeperUI.BrowserController(_nextControllerId, browser);
       browser.setAttribute("EvenDeeper.ControllerIndex", _nextControllerId);      
       _controllers[_nextControllerId++] = controller;
     } else {
@@ -67,7 +67,7 @@ EvenDeeperUI.getSidebar = function() {
   }
 };
 
-EvenDeeperUI.PageController = function(id, browser) {
+EvenDeeperUI.BrowserController = function(id, browser) {
   var _page = null;  
   var _state = EvenDeeperUI.PageStates.STATE_NO_PAGE;
   var _id = id;
@@ -95,6 +95,13 @@ EvenDeeperUI.PageController = function(id, browser) {
     }
   };
   
+  function onWontProcessThisPage(page) {
+    if (page === _page) {
+      setState(EvenDeeperUI.PageStates.STATE_WONT_LOAD_THIS_PAGE);
+      updateSidebar();
+    }
+  }
+  
   function isSelectedTab() {
     return (_browser === gBrowser.selectedBrowser);
   }
@@ -107,6 +114,8 @@ EvenDeeperUI.PageController = function(id, browser) {
   };
   
   function onDOMContentLoaded(e) {            
+    dump("onDOMContentLoaded");
+    
     // dont trigger for iframes
     if (e.originalTarget instanceof HTMLDocument) {
       var win = e.originalTarget.defaultView;
@@ -115,12 +124,17 @@ EvenDeeperUI.PageController = function(id, browser) {
       }
     }
         
+    initEvenDeeperPage(e.originalTarget);
+  };
+  
+  function initEvenDeeperPage(doc) {
     // conjure up context for EvenDeeper.Main; basically we pass it
     // a doc handle and some callbacks    
     var context = { 
-      doc: e.originalTarget, 
+      doc: doc,
       onFinishedCalculatingSimilarities: onFinishedCalculatingSimilarities,
-      onStartedCalculatingSimilarities: onStartedCalculatingSimilarities
+      onStartedCalculatingSimilarities: onStartedCalculatingSimilarities,
+      onWontProcessThisPage: onWontProcessThisPage
     };
             
     dump("making new EvenDeeper.Page() in controller " + _id + "\n");
@@ -128,8 +142,24 @@ EvenDeeperUI.PageController = function(id, browser) {
     browser.addEventListener("unload", onUnload, true);
     
     _page = new EvenDeeper.Page(context);
-    _page.process(context);    
-  };
+    _page.process(context);
+  }
+  
+  function onPageShow(e) {
+    // dont trigger for iframes
+    if (e.originalTarget instanceof HTMLDocument) {
+      var win = e.originalTarget.defaultView;
+      if (win.frameElement) {
+        return;
+      }
+    }
+    
+    // we handle pageshow because loads of pages from cache (e.g. when going back)
+    // doesn't actually trigger a domloaded event; 
+    if (e.persisted) {
+      initEvenDeeperPage(e.originalTarget);
+    }
+  }
   
   function onUnload(e) {
     if (e.originalTarget instanceof HTMLDocument) {
@@ -144,6 +174,7 @@ EvenDeeperUI.PageController = function(id, browser) {
   }
     
   browser.addEventListener("DOMContentLoaded", onDOMContentLoaded, true);  
+  browser.addEventListener("pageshow", onPageShow, true);
   updateSidebar();
       
   return {
