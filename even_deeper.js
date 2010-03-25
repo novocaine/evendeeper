@@ -208,6 +208,20 @@ EvenDeeper.Page = function(context) {
       return _htmlParser;
     },
     
+    parseFragment: function(html) {
+      // we use the recommended approach from mdc to safely parse the content
+      // in a temporary div. the html is evaluated in the context of whatever
+      // page we're currently processing (rather than the chrome context)
+      // and the div is never actually inserted in the page.
+      var div = _this.contextDoc().createElement("div");
+
+      div.appendChild(Components.classes["@mozilla.org/feed-unescapehtml;1"]
+          .getService(Components.interfaces.nsIScriptableUnescapeHTML)
+          .parseFragment(html, false, null, div));      
+
+      return(div.textContent);
+    },
+    
     // secret sauce to get jQuery working using the correct doc. use this instead of $.
     jQueryFn: function(selector, context) {
       return new jQuery.fn.init(selector, context || _contextDoc);

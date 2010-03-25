@@ -1,8 +1,6 @@
-EvenDeeper.AtomEntry = function(reader, xml) {
-  // we use jquery to parse the xml; that introduces a dependency on the current
-  // document which is why we need to pass a reader instance to the constructor
-  var _xml = reader.main().jQueryFn(xml);
-  
+EvenDeeper.AtomEntry = function(reader, xml) {  
+  var _xml = reader.main().jQueryFn(xml);  
+      
   // returns the inner html of a sub-element in this article
   this.elem = function(element_name) {        
     var elements = _xml.find(element_name);
@@ -11,16 +9,7 @@ EvenDeeper.AtomEntry = function(reader, xml) {
       // retreiving the text is a bit tricky; the problem is that
       // any html content in there is html-encoded (e.g. &lt; etc)
       // so that it doesn't mess with the actual atom tagging itself.
-      //
-      // so we need to strip that out somehow. the trick we use here is
-      // to create a temp div, set its innerHTML to the text content
-      // of the original element (decoding the html-encoded message),
-      // then return its textContent in turn (thus stripping the tags).
-      //
-      // hack: break encapsulation here to get a document handle
-      var div = reader.main().contextDoc().createElement("div");
-      div.innerHTML = elements[0].textContent;
-      return(div.textContent);
+      return reader.main().parseFragment(elements[0].textContent);            
     } else {
       return null;
     }
@@ -90,6 +79,8 @@ EvenDeeper.GoogleReader = function(main) {
     
     EvenDeeper.debug("getting items from " + url + " with sid " + googleLogin['SID']);
         
+    // note that this parses and executes anything in the return call; this should be
+    // reasonably safe assuming we trust google reader to not do anything evil
     jQuery.ajax({
       url: url,
       beforeSend: function(xhr) {
@@ -103,7 +94,7 @@ EvenDeeper.GoogleReader = function(main) {
     // add all documents in response to corpus
     xml_response.find("entry").each(function(index, entry) {      
       // create and store article
-      var atom = new EvenDeeper.AtomEntry(_this, _main.jQueryFn(entry));
+      var atom = new EvenDeeper.AtomEntry(_this, entry);
             
       if (_atoms.length < _grMaxTotalItems) {
         _atoms.push(atom);      
@@ -127,7 +118,7 @@ EvenDeeper.GoogleReader = function(main) {
   function grGetItemsCallback(data) {    
     // convert responseText into a dom tree we can parse
     var xml_response = _main.jQueryFn(data);
-    
+        
     // verify response
     if (xml_response.children()[0].tagName != "feed") {
       EvenDeeper.errorMsg("Google Reader responded with something indecipherable.");
