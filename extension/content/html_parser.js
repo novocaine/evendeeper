@@ -53,13 +53,17 @@ EvenDeeper.HtmlParser = function(page) {
         url: url,
         dataType: "text",
         success: function(data) {          
-          iframe().webNavigation.loadURI("data:text/html;" + encodeURI(data), Components.interfaces.nsIWebNavigation, null, null, null);
+          _this.loadText(data);          
         },
         error: function(xhr, status) {
           EvenDeeper.debug("error (" + status + ") getting " + url );
           _callback(null); 
         }
       });
+    },
+    
+    loadText: function(data) {
+      iframe().webNavigation.loadURI("data:text/html;" + encodeURI(data), Components.interfaces.nsIWebNavigation, null, null, null);
     }
   };
   
