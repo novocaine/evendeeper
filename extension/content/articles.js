@@ -3,16 +3,13 @@ EvenDeeper.Article = function(main, source, title, body_div, url) {
   var _url = url;
   var _source = source;
   var _updatedBodyCallback = null;
-  var _enableUpdatingFromSource = false;
+  var _enableUpdatingFromSource = true;
   var _updatedFromSource = false;
   var _bodyDiv = body_div;
   
-  Firebug.Console.log(title);
-  Firebug.Console.log(_bodyDiv);
-  
   var _this = {
     title: function() { return _title; },
-    body: function() { return _bodyDiv.textContent; },
+    body: function() { return _this.bodyDiv().textContent; },
     bodyDiv: function() { return _bodyDiv; },
     url: function() { return _url; },
     source: function() { return _source; },
@@ -26,21 +23,21 @@ EvenDeeper.Article = function(main, source, title, body_div, url) {
         page.htmlParser().loadUrl(url, function(doc) {
           // doc === null means there was some problem loading the page
           if (doc) {
-            var ps = main.jQueryFn("p", doc);          
-            var body = null;
-
-            // generate body text 
-            // strategy is to look for the first node containing > 1000 chars worth of text
-            ps.each(function(index, n) {                                  
+            main.jQueryFn("p", doc).each(function(index, n) {                                  
               var node = main.jQueryFn(n);
             
-              // EvenDeeper.debug("parent text: " + node.parent().text());
+              if (node.parent().children("p").text().length > 500) {
+                // create a div with the ps in it
+                _bodyDiv = main.contextDoc().createElement("div");
+                
+                node.parent().children("p").each(function(index, n) {
+                  _bodyDiv.appendChild(n);
+                });
+                
+                //_bodyDiv = n.parentNode;
             
-              if (node.children("p").text().length > 500) {
-                EvenDeeper.debug(node);
-                setMarkedUpBody(main.parseFragment(node.nodeValue));
-                              
-                // EvenDeeper.debug("updated body to ------->" + _body);
+                EvenDeeper.debug(n.parentNode);
+                // EvenDeeper.debug("updated body to -------> " + _this.body());
                 return false;
               }
             });
