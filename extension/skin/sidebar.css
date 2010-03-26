@@ -10,3 +10,19 @@
 {
   font-weight: bold;
 }
+
+tooltip img
+{
+  max-width: 200px;
+  max-height: 200px;
+}
+
+tooltip
+{
+  white-space: normal;
+}
+
+p
+{
+  margin-bottom: 10px;
+}

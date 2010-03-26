@@ -9,7 +9,7 @@ EvenDeeper.AtomEntry = function(reader, xml) {
       // retreiving the text is a bit tricky; the problem is that
       // any html content in there is html-encoded (e.g. &lt; etc)
       // so that it doesn't mess with the actual atom tagging itself.
-      return reader.main().parseFragment(elements[0].textContent);            
+      return reader.main().parseFragment(elements[0].textContent);      
     } else {
       return null;
     }

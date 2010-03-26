@@ -1,21 +1,25 @@
-EvenDeeper.Article = function(main, source, title, body, url) {
+EvenDeeper.Article = function(main, source, title, body_div, url) {
   var _title = title;
-  var _body = body;
   var _url = url;
   var _source = source;
   var _updatedBodyCallback = null;
-  var _enableUpdatingFromSource = true;
+  var _enableUpdatingFromSource = false;
   var _updatedFromSource = false;
-    
-  return {
+  var _bodyDiv = body_div;
+  
+  Firebug.Console.log(title);
+  Firebug.Console.log(_bodyDiv);
+  
+  var _this = {
     title: function() { return _title; },
-    body: function() { return _body; },
+    body: function() { return _bodyDiv.textContent; },
+    bodyDiv: function() { return _bodyDiv; },
     url: function() { return _url; },
     source: function() { return _source; },
 
     // given an article with an insigificant body, visits its url to get the full article   
     updateBodyFromSourceIfNecessary: function(page, callback) {
-      if (_body.length < 1000 && _enableUpdatingFromSource && !_updatedFromSource) {
+      if (_this.body().length < 1000 && _enableUpdatingFromSource && !_updatedFromSource) {
 
         EvenDeeper.debug("updating body of " + url);    
         
@@ -32,8 +36,10 @@ EvenDeeper.Article = function(main, source, title, body, url) {
             
               // EvenDeeper.debug("parent text: " + node.parent().text());
             
-              if (node.parent().children("p").text().length > 500) {        
-                _body = node.parent().children("p").text();        
+              if (node.children("p").text().length > 500) {
+                EvenDeeper.debug(node);
+                setMarkedUpBody(main.parseFragment(node.nodeValue));
+                              
                 // EvenDeeper.debug("updated body to ------->" + _body);
                 return false;
               }
@@ -52,6 +58,8 @@ EvenDeeper.Article = function(main, source, title, body, url) {
       }
     }
   };
+  
+  return _this;
 };
 
 // utility class for calling article update in a loop for all articles
@@ -106,14 +114,14 @@ EvenDeeper.ArticleStore = function() {
   }
   
   function createArticleFromAtom(atom) {
-    var title = atom.elem("title");              
-    var body = atom.elem("content") || atom.elem("summary");
+    var title = atom.elem("title");
+    var body_div = atom.elem("content") || atom.elem("summary");
 
-    if (body === null) {
-      body = title;
+    if (body_div === null) {
+      body_div = title;
     }
   
-    return new EvenDeeper.Article(_main, atom.feed_title(), title, body, atom.url());
+    return new EvenDeeper.Article(_main, atom.feed_title(), title.textContent, body_div, atom.url());
   };
     
   // google reader announced it has new items; newItems is a flag indicating whether anything's changed

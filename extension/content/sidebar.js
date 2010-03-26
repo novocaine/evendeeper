@@ -94,8 +94,6 @@ EvenDeeperSidebar = function() {
       var text = document.createTextNode(scores[i].article.title() + " (" + score + ")");
       link.appendChild(text);  
       link.setAttribute("href", scores[i].article.url());
-      link.setAttribute("alt", scores[i].article.body());
-      
       link.addEventListener("click", function(e) {
         var mainWindow = window.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
                                .getInterface(Components.interfaces.nsIWebNavigation)
@@ -108,6 +106,7 @@ EvenDeeperSidebar = function() {
         return true;
       }, true);
       
+      link.setAttribute("tooltip", scores[i].article.url());
       link.setAttribute("class", "text-link");
       link.style.marginBottom = "1em";        
       
@@ -115,9 +114,15 @@ EvenDeeperSidebar = function() {
       text = document.createTextNode(scores[i].article.source());
       source.appendChild(text);
       source.style.fontWeight = "bold";
-              
+      
+      var tooltip = document.createElement("tooltip");
+      tooltip.setAttribute("id", scores[i].article.url());
+      tooltip.appendChild(scores[i].article.bodyDiv());
+      tooltip.setAttribute("noautohide", "true");
+      
       container.appendChild(source);
       container.appendChild(link);
+      container.appendChild(tooltip);
     }
     
     if (_num_hidden_articles > 0) {

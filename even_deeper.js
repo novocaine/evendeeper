@@ -19,15 +19,8 @@ EvenDeeper.PageTypes = {};
 
 EvenDeeper.PageTypes.TestHarness = function(main) {
   return {     
-    createArticleFromCurrentPage: function() {
-      // presumably test harness
-      var body = "";
-
-      main.jQueryFn("#body p").each(function() {
-        body = body + main.jQueryFn(this).text() + "\n";
-      });
-                  
-      return new EvenDeeper.Article(main, "", main.jQueryFn("#title")[0].innerHTML, body, main.contextDoc().documentURI);
+    createArticleFromCurrentPage: function() {                  
+      return new EvenDeeper.Article(main, "", main.jQueryFn("#title")[0].innerHTML, main.contextDoc().getElementById("body"), main.contextDoc().documentURI);
     }
   };
 };
@@ -219,7 +212,7 @@ EvenDeeper.Page = function(context) {
           .getService(Components.interfaces.nsIScriptableUnescapeHTML)
           .parseFragment(html, false, null, div));      
 
-      return(div.textContent);
+      return(div);
     },
     
     // secret sauce to get jQuery working using the correct doc. use this instead of $.
