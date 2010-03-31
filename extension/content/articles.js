@@ -7,6 +7,9 @@ EvenDeeper.Article = function(main, source, title, body_div, url) {
   var _updatedFromSource = false;
   var _bodyDiv = body_div;
   
+  Firebug.Console.log(_bodyDiv);
+  Firebug.Console.log(_bodyDiv.textContent);
+  
   var _this = {
     title: function() { return _title; },
     body: function() { return _this.bodyDiv().textContent; },
