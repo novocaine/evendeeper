@@ -94,7 +94,7 @@ EvenDeeperSidebar = function() {
       var text = document.createTextNode(scores[i].article.title() + " (" + score + ")");
       link.appendChild(text);  
       link.setAttribute("href", scores[i].article.url());
-      link.addEventListener("click", function(e) {
+      link.onclick = function(e) {
         var mainWindow = window.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
                                .getInterface(Components.interfaces.nsIWebNavigation)
                                .QueryInterface(Components.interfaces.nsIDocShellTreeItem)
@@ -103,8 +103,8 @@ EvenDeeperSidebar = function() {
                                .getInterface(Components.interfaces.nsIDOMWindow);
 
         mainWindow.gBrowser.selectedTab = mainWindow.gBrowser.addTab(e.originalTarget.href);
-        return true;
-      }, true);
+        return false;
+      };
       
       link.setAttribute("tooltip", scores[i].article.url());
       link.setAttribute("class", "text-link");
