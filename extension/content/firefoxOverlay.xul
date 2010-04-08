@@ -9,7 +9,7 @@
 	<script src="nlp.js" />	
 	
 	<!-- note the order here matters; the latter 2 want EvenDeeper to be pre-defined -->
-	<script src="even_deeper.js" />
+	<script src="page.js" />
 	<script src="google_reader.js" />
 	<script src="worker_thread.js" />	
 	<script src="articles.js" />
