@@ -192,3 +192,14 @@ EvenDeeperSidebar = function() {
     }    
   };
 }();
+
+window.addEventListener("load", function(e) {
+  var mainWindow = window.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
+                     .getInterface(Components.interfaces.nsIWebNavigation)
+                     .QueryInterface(Components.interfaces.nsIDocShellTreeItem)
+                     .rootTreeItem
+                     .QueryInterface(Components.interfaces.nsIInterfaceRequestor)
+                     .getInterface(Components.interfaces.nsIDOMWindow);
+  
+  mainWindow.EvenDeeperUI.OverlayController.onSidebarLoaded();
+}, true);

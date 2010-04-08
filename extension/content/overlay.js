@@ -4,14 +4,15 @@ EvenDeeperUI.OverlayController = function() {
   var _main = null;
   
   // startup and rego
-  function onWindowLoad() {    
-    dump("windowLoad");    
+  function onWindowLoad(e) {    
+    dump("onWindowLoad\n");
+                
     // initialization code
     this.initialized = true;
     this.strings = document.getElementById("evendeeper-strings");    
     gBrowser.tabContainer.addEventListener("TabOpen", onTabAdd, false);
     gBrowser.tabContainer.addEventListener("TabSelect", onTabSelect, false);
-    
+        
     for (var i=0; i < gBrowser.browsers.length; ++i) {
       initController(gBrowser.browsers[i]);
     }
@@ -54,7 +55,28 @@ EvenDeeperUI.OverlayController = function() {
     }
   }
   
-  window.addEventListener("load", onWindowLoad, false);
+  function selectedBrowserController() {
+    for (var index in _controllers) {
+      if (_controllers.hasOwnProperty(index)) {
+        var controller = _controllers[index];
+        dump(controller);
+        if (controller.isSelectedTab()) {
+          return controller;
+        }
+      }
+    }
+    
+    return null;    
+  }
+  
+  window.addEventListener("load", onWindowLoad, false);  
+  
+  return {
+    onSidebarLoaded: function() {
+      var selected = selectedBrowserController();
+      if (selected) selected.onSidebarLoad();
+    }
+  };  
 }();
 
 EvenDeeperUI.getSidebar = function() {
@@ -100,16 +122,14 @@ EvenDeeperUI.BrowserController = function(id, browser) {
       setState(EvenDeeperUI.PageStates.STATE_WONT_LOAD_THIS_PAGE);
       updateSidebar();
     }
-  }
-  
-  function isSelectedTab() {
-    return (_browser === gBrowser.selectedBrowser);
-  }
+  };
   
   function updateSidebar() {
     var sb = EvenDeeperUI.getSidebar();
-    if (sb && isSelectedTab()) {
+    if (sb && _this.isSelectedTab()) {
       sb.updateUI(getState(), _page);
+    } else {
+      dump("ignoring updateSidebar\n");
     }
   };
   
@@ -177,10 +197,20 @@ EvenDeeperUI.BrowserController = function(id, browser) {
   browser.addEventListener("pageshow", onPageShow, true);
   updateSidebar();
       
-  return {
+  var _this = {
+    isSelectedTab: function() {
+      return (_browser === gBrowser.selectedBrowser);
+    },
+    
+    onSidebarLoad: function() {
+      updateSidebar();
+    },
+    
     onTabSelect: function() {    
       dump("tabSelect\n");
       updateSidebar();    
     }    
   };
+  
+  return _this;
 };
