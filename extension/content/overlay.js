@@ -192,11 +192,7 @@ EvenDeeperUI.BrowserController = function(id, browser) {
     dump("unload on page " + _id + "\n");
     _page.setUnloaded();
   }
-    
-  browser.addEventListener("DOMContentLoaded", onDOMContentLoaded, true);  
-  browser.addEventListener("pageshow", onPageShow, true);
-  updateSidebar();
-      
+          
   var _this = {
     isSelectedTab: function() {
       return (_browser === gBrowser.selectedBrowser);
@@ -211,6 +207,10 @@ EvenDeeperUI.BrowserController = function(id, browser) {
       updateSidebar();    
     }    
   };
+  
+  browser.addEventListener("DOMContentLoaded", onDOMContentLoaded, true);  
+  browser.addEventListener("pageshow", onPageShow, true);
+  updateSidebar();
   
   return _this;
 };
