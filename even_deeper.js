@@ -123,6 +123,8 @@ EvenDeeper.PageProcessor = function() {
       // spawn a thread to process the articles. the trick is we don't want multiple threads clobbering
       // the NLP component at once - it's not threadsafe - so we put a big dumb lock around the whole thing.
       //                  
+      // note you could also do this using web workers - but it would be inefficient as web workers' message
+      // passing only supports copying in strings - copying in the entire corpus isn't an option for us
       var thread = Components.classes["@mozilla.org/thread-manager;1"]
                               .getService(Components.interfaces.nsIThreadManager)
                               .currentThread;
