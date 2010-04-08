@@ -161,27 +161,35 @@ NLP.Document = function(corpus, text, id) {
 };
 
 NLP.Corpus = function() {  
+  // keyed by id, valued by NLP.Document
 	var _documents = {};
 	var _num_documents = 0;
 	var _unionTerms = null;
 	var _idfs = {};
 	
-	return {		
+	return {
 		// inverse document frequency
-		idf: function(term) {
+		idf: function(term) {		  
 		  if (!(_idfs.hasOwnProperty(term))) {		    		    
 		    var count = 0;
   			// find num docs where the term appears
-  			jQuery.each(_documents, function(id, doc) {
-  				if (doc.wordCounts().hasOwnProperty(term)) { ++count; }					
-  			});
+  			for(docId in _documents) {  			  
+  			  if (_documents.hasOwnProperty(docId)) {
+  			    var doc = _documents[docId];
+  			    if (doc.wordCounts().hasOwnProperty(term)) { 
+  			      ++count; 
+  			    }
+  			  }
+  			};
 
   			if (count == 0) { 
-  			  console.log("warning: idf is 0 for term " + term);
+  			  EvenDeeper.debug("warning: idf is 0 for term " + term);
   			  return 0;
   		  }
 			
-  			_idfs[term] = Math.log(_num_documents / count);  			
+			  var result = Math.log(_num_documents / count);
+  			_idfs[term] = result;
+  			return result;
   		}
   		
   		return _idfs[term];
@@ -213,14 +221,15 @@ NLP.Corpus = function() {
 			var dotproduct = 0;
 			
 			var unionTerms = this.unionTerms();
+			var delta = 0;			
 			
-			for (var term in unionTerms) {
-				var delta = 0;
-				
-				var tfidf1 = tfidfs1.hasOwnProperty(term) ? tfidfs1[term] : delta;				
-				var tfidf2 = tfidfs2.hasOwnProperty(term) ? tfidfs2[term] : delta;    
-						
-				dotproduct += (tfidf1 * tfidf2);				
+			for (var term in unionTerms) {	
+				var tfidf1 = tfidfs1.hasOwnProperty(term) ? tfidfs1[term] : 0;
+				var tfidf2;
+				if (tfidf1 != 0) {
+				  tfidf2 = tfidfs2.hasOwnProperty(term) ? tfidfs2[term] : 0;    
+				  dotproduct += (tfidf1 * tfidf2);
+				}
 			}
 			
 			// note we can just return the dot product because 
