@@ -50,8 +50,8 @@ EvenDeeper.PageTypes.Guardian = function(main) {
     },*/
     
     createArticleFromCurrentPage: function() {
-      var body = main.jQueryFn("#article-wrapper");
-      var title = main.jQueryFn("#article-header h1").text();        
+      var body = main.contextDoc().getElementById("article-wrapper");
+      var title = main.jQueryFn("#article-header h1").text();            
       return new EvenDeeper.Article(main, "The Guardian", title, body, main.contextDoc().location.href);
     }         
   };
