@@ -265,38 +265,5 @@ EvenDeeper.Page = function(context) {
   return _this;
 };
 
-EvenDeeper.Similarity = {
-  // calculates the similarities between a set of articles and the current article.
-  // returns an array of articles sorted by similarity    
-  findArticleSimilarities: function(currentDoc, articles, corpus) {    
-    // clear previous cached tf-idf data. this is expensive (as it means it all has to be calculated again)
-    // but usually necessary because if we're at this point, it means we have no prior cached result for
-    // the current page - which means the current page wasn't already part of the corpus - which means
-    // it was added and all the tf-idfs need to be recalculated. there's probably a better way, but this is safe for now.
-    corpus.clearCache();
-    
-    var start = new Date().getTime();
-    
-    // generate 
-    var scores = [];
-    
-    // compare reader-sourced articles to current article, stashing similarity in the article object
-    jQuery.each(articles, function(index, article) {        
-      var sim = corpus.docSimilarity(currentDoc, article.nlpdoc);
-      scores.push({ article: article, similarity: sim });
-    });                
-
-    scores.sort(function(score_a, score_b) {
-      return (score_b.similarity - score_a.similarity);
-    });
-
-    var end = new Date().getTime();
-
-    dump("similarity time: " + (end - start) + "\n\n");
-    
-    return scores;
-  }
-};
-
 // singleton corpus
 EvenDeeper.corpusInstance = new NLP.Corpus();
