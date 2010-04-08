@@ -1,8 +1,7 @@
 EvenDeeperUI.OverlayController = function() {  
   var _controllers = {};
   var _nextControllerId = 0;
-  var _main = null;
-  
+    
   // startup and rego
   function onWindowLoad(e) {    
     dump("onWindowLoad\n");

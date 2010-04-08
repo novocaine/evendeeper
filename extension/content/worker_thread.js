@@ -24,7 +24,6 @@ mainThread.prototype = {
   }
 };
 
-// takes as argument an id and an EvenDeeper.Main instance
 var workingThread = function(threadID, context) {
   this.threadID = threadID;  
   this.context = context;

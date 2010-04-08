@@ -1,4 +1,4 @@
-EvenDeeper.Article = function(main, source, title, body_div, url) {
+EvenDeeper.Article = function(page, source, title, body_div, url) {
   var _title = title;
   var _url = url;
   var _source = source;
@@ -23,12 +23,12 @@ EvenDeeper.Article = function(main, source, title, body_div, url) {
         page.htmlParser().loadUrl(url, function(doc) {
           // doc === null means there was some problem loading the page
           if (doc) {
-            main.jQueryFn("p", doc).each(function(index, n) {                                  
-              var node = main.jQueryFn(n);
+            page.jQueryFn("p", doc).each(function(index, n) {                                  
+              var node = page.jQueryFn(n);
             
               if (node.parent().children("p").text().length > 500) {
                 // create a div with the ps in it
-                _bodyDiv = main.contextDoc().createElement("div");
+                _bodyDiv = page.contextDoc().createElement("div");
                 
                 node.parent().children("p").each(function(index, n) {
                   _bodyDiv.appendChild(n);
@@ -91,7 +91,7 @@ EvenDeeper.ArticleBodyUpdater = function() {
 };
 
 EvenDeeper.ArticleStore = function() {
-  var _main = null;
+  var _page = null;
   var _doneCallback = null;
   var _googleReader = null;
   var _articles = {};
@@ -118,7 +118,7 @@ EvenDeeper.ArticleStore = function() {
       body_div = title;
     }
   
-    return new EvenDeeper.Article(_main, atom.feed_title(), title.textContent, body_div, atom.url());
+    return new EvenDeeper.Article(_page, atom.feed_title(), title.textContent, body_div, atom.url());
   };
     
   // google reader announced it has new items; newItems is a flag indicating whether anything's changed
@@ -144,7 +144,7 @@ EvenDeeper.ArticleStore = function() {
       });
     
       // update bodies from articles sources
-      new EvenDeeper.ArticleBodyUpdater().updateArticles(_main, newArticles, onUpdatedArticles);
+      new EvenDeeper.ArticleBodyUpdater().updateArticles(_page, newArticles, onUpdatedArticles);
       
     } else {
       _doneCallback();
@@ -165,11 +165,11 @@ EvenDeeper.ArticleStore = function() {
   };
           
   return {        
-    updateArticles: function(main, finishedCallback) {
-      _main = main;
+    updateArticles: function(page, finishedCallback) {
+      _page = page;
       _doneCallback = finishedCallback;
       // get new articles from google reader
-      _googleReader = new EvenDeeper.GoogleReader(main);
+      _googleReader = new EvenDeeper.GoogleReader(page);
       _googleReader.loadItems(grGotAllItems);      
     },
     

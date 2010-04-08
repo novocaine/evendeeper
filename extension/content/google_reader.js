@@ -1,5 +1,5 @@
 EvenDeeper.AtomEntry = function(reader, xml) {  
-  var _xml = reader.main().jQueryFn(xml);  
+  var _xml = reader.page().jQueryFn(xml);  
       
   // returns the inner html of a sub-element in this article
   this.elem = function(element_name) {        
@@ -9,7 +9,7 @@ EvenDeeper.AtomEntry = function(reader, xml) {
       // retreiving the text is a bit tricky; the problem is that
       // any html content in there is html-encoded (e.g. &lt; etc)
       // so that it doesn't mess with the actual atom tagging itself.
-      return reader.main().parseFragment(elements[0].textContent);      
+      return reader.page().parseFragment(elements[0].textContent);      
     } else {
       return null;
     }
@@ -18,7 +18,7 @@ EvenDeeper.AtomEntry = function(reader, xml) {
   this.url = function() {
     var elements = _xml.find("link");
     if (elements.length >= 1) {
-      return(reader.main().jQueryFn(elements[0]).attr("href"));
+      return(reader.page().jQueryFn(elements[0]).attr("href"));
     } else {
       return null;
     }
@@ -38,7 +38,7 @@ EvenDeeper.AtomEntry = function(reader, xml) {
   this.xml = function() { return _xml; };
 };
 
-EvenDeeper.GoogleReader = function(main) {
+EvenDeeper.GoogleReader = function(page) {
   var googleLogin = {};
   var _atoms = [];
   var _grLabel = 'foreign%20policy';
@@ -47,7 +47,7 @@ EvenDeeper.GoogleReader = function(main) {
   var _grItemCount = 0;
   var _loginEmail = null;
   var _loginPassword = null;
-  var _main = main;
+  var _page = page;
   
   function grLogin(callback) {    
     var prefs = Components.classes["@mozilla.org/preferences-service;1"]
@@ -117,7 +117,7 @@ EvenDeeper.GoogleReader = function(main) {
   
   function grGetItemsCallback(data) {    
     // convert responseText into a dom tree we can parse
-    var xml_response = _main.jQueryFn(data);
+    var xml_response = _page.jQueryFn(data);
         
     // verify response
     if (xml_response.children()[0].tagName != "feed") {
@@ -154,7 +154,7 @@ EvenDeeper.GoogleReader = function(main) {
   };
     
   var _this = { 
-    main: function() { return _main; },
+    page: function() { return _page; },
         
     loadItems: function(callback) {      
       // calls back when items are gotten. passes a bool indicating whether items are new (true) or from cache (false)

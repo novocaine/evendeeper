@@ -17,15 +17,15 @@ EvenDeeper.errorMsg = function(msg) {
 
 EvenDeeper.PageTypes = {};
 
-EvenDeeper.PageTypes.TestHarness = function(main) {
+EvenDeeper.PageTypes.TestHarness = function(page) {
   return {     
     createArticleFromCurrentPage: function() {                  
-      return new EvenDeeper.Article(main, "", main.jQueryFn("#title")[0].innerHTML, main.contextDoc().getElementById("body"), main.contextDoc().documentURI);
+      return new EvenDeeper.Article(page, "", page.jQueryFn("#title")[0].innerHTML, page.contextDoc().getElementById("body"), page.contextDoc().documentURI);
     }
   };
 };
 
-EvenDeeper.PageTypes.Guardian = function(main) {
+EvenDeeper.PageTypes.Guardian = function(page) {
   return { 
     /*displayResults: function(articles) {
       var after_elem = $("#content");
@@ -50,9 +50,9 @@ EvenDeeper.PageTypes.Guardian = function(main) {
     },*/
     
     createArticleFromCurrentPage: function() {
-      var body = main.contextDoc().getElementById("article-wrapper");
-      var title = main.jQueryFn("#article-header h1").text();            
-      return new EvenDeeper.Article(main, "The Guardian", title, body, main.contextDoc().location.href);
+      var body = page.contextDoc().getElementById("article-wrapper");
+      var title = page.jQueryFn("#article-header h1").text();            
+      return new EvenDeeper.Article(page, "The Guardian", title, body, page.contextDoc().location.href);
     }         
   };
 };
