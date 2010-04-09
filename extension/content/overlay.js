@@ -134,8 +134,6 @@ EvenDeeperUI.BrowserController = function(id, browser) {
   };
   
   function onDOMContentLoaded(e) {            
-    dump("onDOMContentLoaded");
-    
     // dont trigger for iframes
     if (e.originalTarget instanceof HTMLDocument) {
       var win = e.originalTarget.defaultView;
