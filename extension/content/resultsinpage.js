@@ -18,18 +18,30 @@ EvenDeeperUI.ResultsInPage = function(_page) {
     holder.style.fontFamily = "Helvetica,sans-serif";
     holder.style.fontSize = "10pt";
     
-    holder.style.maxHeight = "20%";
+    holder.style.maxHeight = "30%";
     holder.style.zIndex = "65535";
     holder.style.overflowY = "auto";    
-    holder.style.width = "30%";
+    holder.style.width = "15%";
     
     for (var i=0; i < scores.length && scores[i].similarity >= _scoreThreshold; ++i) {
       var scoreElement = doc.createElement("div");
-      var titleLink = doc.createElement("a");
+      
+      var sourceName = doc.createElement("div");
+      sourceName.appendChild(doc.createTextNode(scores[i].article.source()));
+      sourceName.style.fontWeight = "bold";  
+      sourceName.style.marginBottom = "0.5em";
+      scoreElement.appendChild(sourceName);
+                
+      var titleLink = doc.createElement("a");      
+      
       titleLink.appendChild(doc.createTextNode(scores[i].article.title()));
       titleLink.setAttribute("href", scores[i].article.url());
       titleLink.setAttribute("target", "_blank");
       scoreElement.appendChild(titleLink);
+      
+      scoreElement.style.marginBottom = "1em";
+      
+      
       holder.appendChild(scoreElement);
     }
             
