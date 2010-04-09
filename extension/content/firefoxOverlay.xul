@@ -7,6 +7,7 @@
 	<script src="page_states.js" />
   <script src="overlay.js"/>
 	<script src="nlp.js" />	
+	<script src="resultsinpage.js" />
 	
 	<!-- note the order here matters; the latter 2 want EvenDeeper to be pre-defined -->
 	<script src="page.js" />
@@ -14,6 +15,7 @@
 	<script src="worker_thread.js" />	
 	<script src="articles.js" />
 	<script src="html_parser.js" />
+	
 	
   <stringbundleset id="stringbundleset">
     <stringbundle id="evendeeper-strings" src="chrome://evendeeper/locale/evendeeper.properties"/>

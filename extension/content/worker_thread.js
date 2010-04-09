@@ -7,12 +7,12 @@ var mainThread = function(threadID, scores, callback) {
 
 mainThread.prototype = {
   run: function() {
-    try {
+    //try {
       // send notification to even deeper that we're done
       this.callback(this.scores);
-    } catch(err) {
-      Components.utils.reportError(err);
-    }
+    //} catch(err) {
+    //  Components.utils.reportError(err);
+    //}
   },
   
   QueryInterface: function(iid) {

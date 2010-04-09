@@ -93,6 +93,7 @@ EvenDeeperUI.BrowserController = function(id, browser) {
   var _state = EvenDeeperUI.PageStates.STATE_NO_PAGE;
   var _id = id;
   var _browser = browser;
+  var _resultsInPage = null;
   
   function setState(state) { _state = state; };  
   function getState() { return _state; };
@@ -103,7 +104,7 @@ EvenDeeperUI.BrowserController = function(id, browser) {
     // this could be an old page finishing
     if (page === _page) {
       setState(EvenDeeperUI.PageStates.STATE_LOADED);
-      updateSidebar();
+      updateUI();
     } else {
       dump("ignoring onFinishedCalculatingSimilarities, unloaded");
     }
@@ -112,24 +113,24 @@ EvenDeeperUI.BrowserController = function(id, browser) {
   function onStartedCalculatingSimilarities(page) {
     if (page === _page) {
       setState(EvenDeeperUI.PageStates.STATE_LOADING_ARTICLES);
-      updateSidebar();
+      updateUI();
     }
   };
   
   function onWontProcessThisPage(page) {
     if (page === _page) {
       setState(EvenDeeperUI.PageStates.STATE_WONT_LOAD_THIS_PAGE);
-      updateSidebar();
+      updateUI();
     }
   };
   
-  function updateSidebar() {
+  function updateUI() {        
     var sb = EvenDeeperUI.getSidebar();
     if (sb && _this.isSelectedTab()) {
       sb.updateUI(getState(), _page);
-    } else {
-      dump("ignoring updateSidebar\n");
     }
+    
+    _resultsInPage.updateUI(getState(), _page);
   };
   
   function onDOMContentLoaded(e) {            
@@ -146,7 +147,7 @@ EvenDeeperUI.BrowserController = function(id, browser) {
     initEvenDeeperPage(e.originalTarget);
   };
   
-  function initEvenDeeperPage(doc) {
+  function initEvenDeeperPage(doc) {    
     // conjure up context for EvenDeeper.Main; basically we pass it
     // a doc handle and some callbacks    
     var context = { 
@@ -161,6 +162,7 @@ EvenDeeperUI.BrowserController = function(id, browser) {
     browser.addEventListener("unload", onUnload, true);
     
     _page = new EvenDeeper.Page(context);
+    _resultsInPage = new EvenDeeperUI.ResultsInPage(_page);
     _page.process(context);
   }
   
@@ -198,18 +200,18 @@ EvenDeeperUI.BrowserController = function(id, browser) {
     },
     
     onSidebarLoad: function() {
-      updateSidebar();
+      updateUI();
     },
     
     onTabSelect: function() {    
       dump("tabSelect\n");
-      updateSidebar();    
+      updateUI();    
     }    
   };
   
   browser.addEventListener("DOMContentLoaded", onDOMContentLoaded, true);  
   browser.addEventListener("pageshow", onPageShow, true);
-  updateSidebar();
+  updateUI();
   
   return _this;
 };

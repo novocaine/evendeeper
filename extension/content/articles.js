@@ -3,7 +3,7 @@ EvenDeeper.Article = function(page, source, title, body_div, url) {
   var _url = url;
   var _source = source;
   var _updatedBodyCallback = null;
-  var _enableUpdatingFromSource = true;
+  var _enableUpdatingFromSource = false;
   var _updatedFromSource = false;
   var _bodyDiv = body_div;
   
