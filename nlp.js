@@ -1,4 +1,4 @@
-var EXPORTED_SYMBOLS = [ "NLP "];
+var NLP = {}
 
 NLP.AccentRemover = function() {
   var _accentRegexes = null;

@@ -62,7 +62,7 @@ EvenDeeper.PageTypes.Guardian = function(page) {
 
 EvenDeeper.PageProcessor = function() {
   var _busy = false;  
-  var _useWorkerThread = true;    
+  var _useWorkerThread = false;    
   var _backgroundThreadInstance = null;
   var _mainThreadInstance = null;
   var _currentDoc = null;
@@ -146,8 +146,8 @@ EvenDeeper.PageProcessor = function() {
       _backgroundThreadInstance.dispatch(new workingThread(1, context), _backgroundThreadInstance.DISPATCH_NORMAL);
 
     } else {
-      EvenDeeper.Similarity.findArticleSimilarities(_currentDoc, EvenDeeper.ArticleStore.articles(), EvenDeeper.corpusInstance);
-      workerThreadFinished();
+      _similarity = new EvenDeeper.Similarity(_currentDoc, EvenDeeper.ArticleStore.articles(), EvenDeeper.corpusInstance);
+      _similarity.run(workerThreadFinished);
     }
   };
   

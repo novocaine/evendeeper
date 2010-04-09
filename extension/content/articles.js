@@ -186,35 +186,64 @@ EvenDeeper.ArticleStore = function() {
   };
 }();
 
-EvenDeeper.Similarity = {
-  // calculates the similarities between a set of articles and the current article.
-  // returns an array of articles sorted by similarity    
-  findArticleSimilarities: function(currentDoc, articles, corpus) {    
-    // clear previous cached tf-idf data. this is expensive (as it means it all has to be calculated again)
-    // but usually necessary because if we're at this point, it means we have no prior cached result for
-    // the current page - which means the current page wasn't already part of the corpus - which means
-    // it was added and all the tf-idfs need to be recalculated. there's probably a better way, but this is safe for now.
-    corpus.clearCache();
+EvenDeeper.Similarity = function(_currentDoc, articles, _corpus) {  
+  var _articlesArray = [];
+  
+  for (i in articles) {
+    if (articles.hasOwnProperty(i)) {
+      _articlesArray.push(articles[i]);
+    }
+  }    
+  
+  var _index = 0;
+  var _scores = [];
+  var _start = null;
+  var _doneProcessingCallback = null;
+  
+  function processArticles() {
+    if (_index >= _articlesArray.length) {
+      return;
+    }
     
-    var start = new Date().getTime();
+    dump(_index + "\n");
     
-    // generate 
-    var scores = [];
+    var article = _articlesArray[_index]; 
+    var sim = _corpus.docSimilarity(_currentDoc, article.nlpdoc);
     
-    // compare reader-sourced articles to current article, stashing similarity in the article object
-    jQuery.each(articles, function(index, article) {        
-      var sim = corpus.docSimilarity(currentDoc, article.nlpdoc);
-      scores.push({ article: article, similarity: sim });
-    });                
+    _scores.push({ article: article, similarity: sim });
+        
+    ++_index;
+    
+    if (_index == _articlesArray.length) {
+      
+      _scores.sort(function(score_a, score_b) {
+        return (score_b.similarity - score_a.similarity);
+      });
 
-    scores.sort(function(score_a, score_b) {
-      return (score_b.similarity - score_a.similarity);
-    });
+      var end = new Date().getTime();
 
-    var end = new Date().getTime();
-
-    dump("similarity time: " + (end - start) + "\n\n");
-    
-    return scores;
+      dump("similarity time: " + (end - _start) + "\n\n");
+      
+      _doneProcessingCallback(_scores);
+    } else {
+      setTimeout(processArticles, 10);
+    }  
   }
+  
+  return {
+    // calculates the similarities between a set of articles and the current article.
+    // returns an array of articles sorted by similarity    
+    run: function(doneProcessingCallback) {
+      // clear previous cached tf-idf data. this is expensive (as it means it all has to be calculated again)
+      // but usually necessary because if we're at this point, it means we have no prior cached result for
+      // the current page - which means the current page wasn't already part of the corpus - which means
+      // it was added and all the tf-idfs need to be recalculated. there's probably a better way, but this is safe for now.
+      _corpus.clearCache();    
+      var _start = new Date().getTime();
+      _doneProcessingCallback = doneProcessingCallback;
+      
+      if (_articlesArray.length > 0)
+        processArticles();
+    }  
+  };
 };
