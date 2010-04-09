@@ -1,7 +1,4 @@
-// nlp utilities for even deeper
-// author: James Salter 2010
-
-var NLP = {};
+var EXPORTED_SYMBOLS = [ "NLP "];
 
 NLP.AccentRemover = function() {
   var _accentRegexes = null;
