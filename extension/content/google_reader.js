@@ -29,7 +29,7 @@ EvenDeeper.AtomEntry = function(reader, xml) {
             
     // idiosyncratically, greader returns a second title element as the feed title
     if (elements.length >= 2) {
-      return(elements[1].textContent);
+      return(reader.page().parseFragment(elements[1].textContent).textContent);
     } else {
       return null;
     }
@@ -41,9 +41,10 @@ EvenDeeper.AtomEntry = function(reader, xml) {
 EvenDeeper.GoogleReader = function(page) {
   var googleLogin = {};
   var _atoms = [];
-  var _grLabel = 'foreign%20policy';
+  //var _grLabel = 'foreign%20policy';
+  var _grLabel = null;
   var _grItemsPerGet = 20;
-  var _grMaxTotalItems = 20;
+  var _grMaxTotalItems = 500;
   var _grItemCount = 0;
   var _loginEmail = null;
   var _loginPassword = null;
@@ -72,7 +73,12 @@ EvenDeeper.GoogleReader = function(page) {
   };
   
   function grGetItemsXHR(continuation) {
-    var url = 'http://www.google.com/reader/atom/user/-/label/' + _grLabel + "?n=" + _grItemsPerGet;
+    var url;
+    if (_grLabel) {
+      url = 'http://www.google.com/reader/atom/user/-/label/' + _grLabel + "?n=" + _grItemsPerGet;
+    } else {
+      url = 'http://www.google.com/reader/atom/?n=' + _grItemsPerGet;
+    }
     if (continuation) {
       url += "&c=" + continuation;
     }
@@ -129,6 +135,8 @@ EvenDeeper.GoogleReader = function(page) {
     
     // getting the continuation is a pain in the ass because jquery doesn't support namespaces (apparently)
     var continuation_tags = xml_response.children().children().filter(function() { return this.tagName == "gr:continuation"; });
+    
+    //EvenDeeper.debug(xml_response.children());
     
     if (continuation_tags.length != 0) {
       var continuation = continuation_tags[0].textContent;

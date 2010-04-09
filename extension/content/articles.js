@@ -205,8 +205,6 @@ EvenDeeper.Similarity = function(_currentDoc, articles, _corpus) {
       return;
     }
     
-    dump(_index + "\n");
-    
     var article = _articlesArray[_index]; 
     var sim = _corpus.docSimilarity(_currentDoc, article.nlpdoc);
     
