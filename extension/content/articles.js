@@ -3,7 +3,7 @@ EvenDeeper.Article = function(page, source, title, body_div, url) {
   var _url = url;
   var _source = source;
   var _updatedBodyCallback = null;
-  var _enableUpdatingFromSource = false;
+  var _enableUpdatingFromSource = true;
   var _updatedFromSource = false;
   var _bodyDiv = body_div;
   
@@ -18,7 +18,7 @@ EvenDeeper.Article = function(page, source, title, body_div, url) {
     updateBodyFromSourceIfNecessary: function(page, callback) {
       if (_this.body().length < 1000 && _enableUpdatingFromSource && !_updatedFromSource) {
 
-        EvenDeeper.debug("updating body of " + url);    
+        EvenDeeper.debug("updating body of " + url);
         
         page.htmlParser().loadUrl(url, function(doc) {
           // doc === null means there was some problem loading the page
@@ -36,7 +36,7 @@ EvenDeeper.Article = function(page, source, title, body_div, url) {
                 
                 //_bodyDiv = n.parentNode;
             
-                EvenDeeper.debug(n.parentNode);
+                // EvenDeeper.debug(n.parentNode);
                 // EvenDeeper.debug("updated body to -------> " + _this.body());
                 return false;
               }
@@ -44,6 +44,8 @@ EvenDeeper.Article = function(page, source, title, body_div, url) {
           
             // set this flag to avoid this being called again in the future
             _updatedFromSource = true;
+          } else {
+            EvenDeeper.debug("failed updating " + url);
           }
           
           callback();
@@ -152,6 +154,8 @@ EvenDeeper.ArticleStore = function() {
   };
       
   function onUpdatedArticles() {
+    EvenDeeper.debug("onUpdatedArticles");
+    
     // populate corpus with the finalised articles. note we wait before
     // the article is definitely finalised (including the update phase)
     // before actually adding it to the corpus; so once its in the corpus its immutable.    
@@ -237,7 +241,7 @@ EvenDeeper.Similarity = function(_currentDoc, articles, _corpus) {
       // the current page - which means the current page wasn't already part of the corpus - which means
       // it was added and all the tf-idfs need to be recalculated. there's probably a better way, but this is safe for now.
       _corpus.clearCache();    
-      var _start = new Date().getTime();
+      _start = new Date().getTime();
       _doneProcessingCallback = doneProcessingCallback;
       
       if (_articlesArray.length > 0)
