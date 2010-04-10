@@ -13,15 +13,17 @@ EvenDeeperUI.ResultsInPage = function(_page) {
     
     // TODO: work out how to style this with a stylesheet
     holder.style.backgroundColor = "white";
-    holder.style.padding = "10px";
+    holder.style.padding = "10px 0px 10px 10px";
     holder.style.border = "solid 1px #CCCCCC";
     holder.style.fontFamily = "Helvetica,sans-serif";
     holder.style.fontSize = "10pt";
     
-    holder.style.maxHeight = "30%";
-    holder.style.zIndex = "65535";
-    holder.style.overflowY = "auto";    
+    holder.style.zIndex = "65535";        
     holder.style.width = "15%";
+    
+    var itemHolder = doc.createElement("div");
+    itemHolder.style.overflowY = "auto";
+    itemHolder.style.height = "200px";
     
     for (var i=0; i < scores.length && scores[i].similarity >= _scoreThreshold; ++i) {
       var scoreElement = doc.createElement("div");
@@ -40,11 +42,12 @@ EvenDeeperUI.ResultsInPage = function(_page) {
       scoreElement.appendChild(titleLink);
       
       scoreElement.style.marginBottom = "1em";
-      
-      
-      holder.appendChild(scoreElement);
-    }
             
+      itemHolder.appendChild(scoreElement);
+    }
+    
+    holder.appendChild(itemHolder);        
+        
     doc.body.appendChild(holder);
     
     alignScoresElement(holder);
