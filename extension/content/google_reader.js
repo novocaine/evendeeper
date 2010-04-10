@@ -44,7 +44,7 @@ EvenDeeper.GoogleReader = function(page) {
   //var _grLabel = 'foreign%20policy';
   var _grLabel = null;
   var _grItemsPerGet = 20;
-  var _grMaxTotalItems = 500;
+  var _grMaxTotalItems = 2000;
   var _grItemCount = 0;
   var _loginEmail = null;
   var _loginPassword = null;
@@ -77,7 +77,8 @@ EvenDeeper.GoogleReader = function(page) {
     if (_grLabel) {
       url = 'http://www.google.com/reader/atom/user/-/label/' + _grLabel + "?n=" + _grItemsPerGet;
     } else {
-      url = 'http://www.google.com/reader/atom/?n=' + _grItemsPerGet;
+      // last 3 days
+      url = 'http://www.google.com/reader/atom/user/-/state/com.google/reading-list?r=o&ot=' + ((new Date().getTime() / 1000).toFixed(0) - 60*60*72);
     }
     if (continuation) {
       url += "&c=" + continuation;
