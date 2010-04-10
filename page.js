@@ -27,28 +27,6 @@ EvenDeeper.PageTypes.TestHarness = function(page) {
 
 EvenDeeper.PageTypes.Guardian = function(page) {
   return { 
-    /*displayResults: function(articles) {
-      var after_elem = $("#content");
-      
-      var html = "<div id='even_deeper'><h3>Even Deeper</h3><ul>";
-      var max_articles = 10;      
-      
-      $(articles).each(function(i) {
-        if (i >= max_articles) return false;
-        var li = "<li style='font-size: 0.9em'>";
-        li += ('<strong>' + this.source() + '</strong>');
-        li += (": <a href='" + this.url() + "' target='_blank'>" + this.title() + "</a>");
-        li += (" (" + (Math.round(this.similarityToCurrentArticle * 100) / 100) + ")");
-        li += "</li>";
-        html += li;
-        return true;
-      });
-      
-      html += "</ul></div>";
-      
-      after_elem.append(html);
-    },*/
-    
     createArticleFromCurrentPage: function() {
       var body = page.contextDoc().getElementById("article-wrapper");
       var title = page.jQueryFn("#article-header h1").text();            
