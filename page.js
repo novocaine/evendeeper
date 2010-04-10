@@ -98,7 +98,8 @@ EvenDeeper.PageProcessor = function() {
   function workerThreadFinished(sortedArticles) {                
     dump("**** workerThreadFinished\n\n");
     for (var i=0; i < sortedArticles.length; ++i) {
-      dump(sortedArticles[i].article.title() + "\t" + sortedArticles[i].similarity + "\n");
+      dump(sortedArticles[i].article.title() + "\t" + sortedArticles[i].article.url() + "\t" + sortedArticles[i].similarity + "\n");
+      dump(sortedArticles[i].article.body() + "\n");
     }
         
     finishProcessing(sortedArticles);
