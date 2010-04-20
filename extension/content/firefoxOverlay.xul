@@ -15,6 +15,7 @@
 	<script src="worker_thread.js" />	
 	<script src="articles.js" />
 	<script src="html_parser.js" />
+	<script src="article_extractor.js" />
 	
 	
   <stringbundleset id="stringbundleset">

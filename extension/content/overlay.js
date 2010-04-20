@@ -130,7 +130,8 @@ EvenDeeperUI.BrowserController = function(id, browser) {
       sb.updateUI(getState(), _page);
     }
     
-    _resultsInPage.updateUI(getState(), _page);
+    if (_resultsInPage)
+      _resultsInPage.updateUI(getState(), _page);
   };
   
   function onDOMContentLoaded(e) {            

@@ -3,7 +3,7 @@ EvenDeeper.Article = function(page, source, title, body_div, url) {
   var _url = url;
   var _source = source;
   var _updatedBodyCallback = null;
-  var _enableUpdatingFromSource = true;
+  var _enableUpdatingFromSource = false;
   var _updatedFromSource = false;
   var _bodyDiv = body_div;
   
@@ -23,25 +23,7 @@ EvenDeeper.Article = function(page, source, title, body_div, url) {
         page.htmlParser().loadUrl(url, function(doc) {
           // doc === null means there was some problem loading the page
           if (doc) {
-            page.jQueryFn("p", doc).each(function(index, n) {                                  
-              var node = page.jQueryFn(n);
-            
-              if (node.parent().children("p").text().length > 500) {
-                // create a div with the ps in it
-                _bodyDiv = page.contextDoc().createElement("div");
-                
-                node.parent().children("p").each(function(index, n) {
-                  _bodyDiv.appendChild(n);
-                });
-                
-                //_bodyDiv = n.parentNode;
-            
-                // EvenDeeper.debug(n.parentNode);
-                // EvenDeeper.debug("updated body to -------> " + _this.body());
-                return false;
-              }
-            });
-          
+            _bodyDiv = EvenDeeper.ArticleExtractor.findData(page, doc).body;
             // set this flag to avoid this being called again in the future
             _updatedFromSource = true;
           } else {
@@ -60,6 +42,10 @@ EvenDeeper.Article = function(page, source, title, body_div, url) {
   
   return _this;
 };
+
+EvenDeeper.extractArticleContent = function(page, doc) {
+  
+}
 
 // utility class for calling article update in a loop for all articles
 EvenDeeper.ArticleBodyUpdater = function() {

@@ -15,26 +15,6 @@ EvenDeeper.errorMsg = function(msg) {
   alert("EvenDeeper: " + msg);
 };
 
-EvenDeeper.PageTypes = {};
-
-EvenDeeper.PageTypes.TestHarness = function(page) {
-  return {     
-    createArticleFromCurrentPage: function() {                  
-      return new EvenDeeper.Article(page, "", page.jQueryFn("#title")[0].innerHTML, page.contextDoc().getElementById("body"), page.contextDoc().documentURI);
-    }
-  };
-};
-
-EvenDeeper.PageTypes.Guardian = function(page) {
-  return { 
-    createArticleFromCurrentPage: function() {
-      var body = page.contextDoc().getElementById("article-wrapper");
-      var title = page.jQueryFn("#article-header h1").text();            
-      return new EvenDeeper.Article(page, "The Guardian", title, body, page.contextDoc().location.href);
-    }         
-  };
-};
-
 // singleton processor; only allows one process at a time for simplicity - the internals aren't threadsafe
 // or even asynchronously safe in the sense of running multiple pages at the same time.
 
@@ -83,12 +63,12 @@ EvenDeeper.PageProcessor = function() {
     finishProcessing(sortedArticles);
   };
   
-  function startProcessing() {
-    // see if we already have a document for the current page. 
-    //
-    // note we don't actually use the article object created here (i.e. put it in the article store), its
-    // just used as a convenient object holding appropriate data
-    var article = _currentPage.pageType().createArticleFromCurrentPage();      
+  function startProcessing() {    
+    var article = _currentPage.pageArticle();
+    
+    if (!article)
+      throw "page doesn't have article";
+    
     _currentDoc = EvenDeeper.corpusInstance.getDocument(article.url());
 
     if (!_currentDoc) {        
@@ -168,6 +148,7 @@ EvenDeeper.Page = function(context) {
   var _this = null;  
   var _htmlParser = null;
   var _unloaded = false;
+  var _article = null;
   
   var _onFinishedCalculatingSimilarities = context.onFinishedCalculatingSimilarities;
   var _onStartedCalculatingSimilarities = context.onStartedCalculatingSimilarities;
@@ -208,13 +189,23 @@ EvenDeeper.Page = function(context) {
     // .onStartedCalculatingSimilarities, a callback that will be called with no arguments only if we start
     process: function() {        
       // init for the correct page type
-      if (_contextDoc.location.href.match(/guardian.co.uk/) && _contextDoc.getElementById("article-wrapper")) {
-        _currentPageType = new EvenDeeper.PageTypes.Guardian(this);
-        EvenDeeper.debug("initialized as guardian");
-      } else if (_contextDoc.location.href.match(/deckardsoftware.com/)) {
-        _currentPageType = new EvenDeeper.PageTypes.TestHarness(this);    
-        EvenDeeper.debug("initialized as harness");
-      } else {
+      for (var pageType in EvenDeeper.PageTypes) {
+        if (EvenDeeper.PageTypes.hasOwnProperty(pageType)) {
+          if (EvenDeeper.PageTypes[pageType].matchDoc(_contextDoc)) {
+            
+            _article = EvenDeeper.PageTypes[pageType].createArticleFromCurrentPage(_this);
+            
+            if (_article) {
+              EvenDeeper.debug("initialized as " + pageType);
+              _currentPageType = EvenDeeper.PageTypes[pageType];
+            } else {
+              EvenDeeper.debug("couldn't scrape data for " + pageType);
+            }
+          }
+        }
+      }
+      
+      if (_currentPageType === null) {      
         _onWontProcessThisPage(_this);
         return;
       }
@@ -226,6 +217,7 @@ EvenDeeper.Page = function(context) {
       EvenDeeper.PageProcessor.process(_this);
     },          
     
+    pageArticle: function() { return _article; },
     scores: function() { return _scores; },
     currentDoc: function() { return _currentDoc; },
     mainThreadInstance: function() { return _mainThreadInstance; },
@@ -243,6 +235,46 @@ EvenDeeper.Page = function(context) {
   
   return _this;
 };
+
+EvenDeeper.PageTypes = {  
+  /*"Guardian" : {
+    createArticleFromCurrentPage: function(page) {
+      var body = page.contextDoc().getElementById("article-wrapper");
+      var title = page.jQueryFn("#article-header h1").text();            
+      return new EvenDeeper.Article(page, "The Guardian", title, body, page.contextDoc().location.href);
+    },
+    
+    matchDoc: function(doc) {
+      return doc.location.href.match(/guardian.co.uk/) && doc.getElementById("article-wrapper");
+    }
+  },*/
+  
+  "Generic" : {    
+    createArticleFromCurrentPage: function(page) {
+      var result = EvenDeeper.ArticleExtractor.findData(page.contextDoc());
+      if (result.body && result.title) {
+        return new EvenDeeper.Article(page, result.sourceName, result.title, result.body, page.contextDoc().location.href);
+      } else {
+        return null;
+      }
+    },
+    
+    matchDoc: function(doc) {      
+      var regexes = {
+        guardian: /guardian\.co\.uk\/.*\//
+      };
+            
+      for (var r in regexes) {
+        if (regexes.hasOwnProperty(r)) {
+          if (doc.location.href.match(regexes[r])) return true;
+        }
+      }
+      
+      return false;
+    }
+  }
+};
+
 
 // singleton corpus
 EvenDeeper.corpusInstance = new NLP.Corpus();

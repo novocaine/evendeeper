@@ -29,7 +29,7 @@
 	
 
 		<p></p>
-		<p>The US secretary of state, Hillary Clinton, todaydemonstrated a new-found steeliness towards Israel by making it clear she was expecting it to back down in the row between the two countries and offer concessions needed for a resumption of Middle East peace talks.
+		<p id="para">The US secretary of state, Hillary Clinton, todaydemonstrated a new-found steeliness towards Israel by making it clear she was expecting it to back down in the row between the two countries and offer concessions needed for a resumption of Middle East peace talks.
 
 		As rock-throwing Palestinians clashed with Israeli forces in Jerusalem in protests dubbed "a day of rage", Clinton sent a double-edged message to Israel.
 
@@ -53,6 +53,25 @@
 
 		Israeli forces tightened a blockade on the Old City, particularly the mosque compound. Israel's Ynet website reported 49 Palestinians injured in confrontations with Israeli border guards and police. Palestinian sources said more than 90 people were injured and some 70 arrested.</p>
 	</div>
-	
+
+	<script type="text/javascript">
+
+		// count commas
+		var e = getElementById("para");
+		var str = e.textContent;
+		
+		var start = new Date().getTime();
+		
+		var count = 0;
+		
+		for (var i=0; i < 1000; ++i) {
+			count += str.match(/,/g).length;
+		}
+		
+		console.log("took " + new Date().getTime() - start + " msec");
+		
+	</script>
 </body>
+
+
 </html>
