@@ -20,9 +20,6 @@ EvenDeeper.errorMsg = function(msg) {
 
 EvenDeeper.PageProcessor = function() {
   var _busy = false;  
-  var _useWorkerThread = false;    
-  var _backgroundThreadInstance = null;
-  var _mainThreadInstance = null;
   var _currentDoc = null;
   var _this = null;
   var _currentPage = null;
@@ -52,9 +49,8 @@ EvenDeeper.PageProcessor = function() {
     }
   }
       
-  // called by the worker thread when its done, on the main thread.
-  function workerThreadFinished(sortedArticles) {                
-    dump("**** workerThreadFinished\n\n");
+  function similarityProcessingFinished(sortedArticles) {                
+    dump("**** similarityProcessingFinished\n\n");
     for (var i=0; i < sortedArticles.length; ++i) {
       dump(sortedArticles[i].article.title() + "\t" + sortedArticles[i].article.url() + "\t" + sortedArticles[i].similarity + "\n");
       dump(sortedArticles[i].article.body() + "\n");
@@ -78,36 +74,8 @@ EvenDeeper.PageProcessor = function() {
       EvenDeeper.corpusInstance.addDocument(_currentDoc);    
     }     
 
-    if (_useWorkerThread) {                        
-      // spawn a thread to process the articles. the trick is we don't want multiple threads clobbering
-      // the NLP component at once - it's not threadsafe - so we put a big dumb lock around the whole thing.
-      //                  
-      // note you could also do this using web workers - but it would be inefficient as web workers' message
-      // passing only supports copying in strings - copying in the entire corpus isn't an option for us
-      var thread = Components.classes["@mozilla.org/thread-manager;1"]
-                              .getService(Components.interfaces.nsIThreadManager)
-                              .currentThread;
-                              
-      dump("***** starting worker thread\n\n");
-
-      _backgroundThreadInstance = Components.classes["@mozilla.org/thread-manager;1"].getService().newThread(0);
-      _mainThreadInstance = Components.classes["@mozilla.org/thread-manager;1"].getService().mainThread;
-
-      var context = {
-        articles: EvenDeeper.ArticleStore.articles(),
-        callback: workerThreadFinished,
-        mainThreadInstance: _mainThreadInstance,
-        backgroundThreadInstance: _backgroundThreadInstance,
-        corpus: EvenDeeper.corpusInstance,
-        currentDoc: _currentDoc
-      };
-
-      _backgroundThreadInstance.dispatch(new workingThread(1, context), _backgroundThreadInstance.DISPATCH_NORMAL);
-
-    } else {
-      _similarity = new EvenDeeper.Similarity(_currentDoc, EvenDeeper.ArticleStore.articles(), EvenDeeper.corpusInstance);
-      _similarity.run(workerThreadFinished);
-    }
+    _similarity = new EvenDeeper.Similarity(_currentDoc, EvenDeeper.ArticleStore.articles(), EvenDeeper.corpusInstance);
+    _similarity.run(similarityProcessingFinished);  
   };
   
   _this = {

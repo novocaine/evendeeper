@@ -12,7 +12,6 @@
 	<!-- note the order here matters; the latter 2 want EvenDeeper to be pre-defined -->
 	<script src="page.js" />
 	<script src="google_reader.js" />
-	<script src="worker_thread.js" />	
 	<script src="articles.js" />
 	<script src="html_parser.js" />
 	<script src="article_extractor.js" />
