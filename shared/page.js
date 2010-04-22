@@ -6,8 +6,11 @@ EvenDeeper.debugging_enabled = true;
 
 EvenDeeper.debug = function(msg) { 
   if (EvenDeeper.debugging_enabled) {
-    //dump(msg + "\n");
-    Firebug.Console.log(msg);
+    if (window.hasOwnProperty("Firebug")) {
+      Firebug.Console.log(msg);
+    } else {
+      console.log(msg);
+    }
   }
 };
 
@@ -96,8 +99,12 @@ EvenDeeper.PageProcessor = function() {
         return;
       }
             
-      if (EvenDeeper.ArticleStore.pastExpiry()) {
-        EvenDeeper.ArticleStore.updateArticles(page, startProcessing);
+      if (EvenDeeper.ArticleStore.pastExpiry(page.articleDataSource())) {
+        EvenDeeper.ArticleStore.updateArticles({ 
+          page: page, 
+          finishedCallback: startProcessing,
+          dataSource: page.articleDataSource()
+        });
         return;
       }
       
@@ -117,6 +124,7 @@ EvenDeeper.Page = function(context) {
   var _htmlParser = null;
   var _unloaded = false;
   var _article = null;
+  var _articleDataSource = context.articleDataSource; // GoogleReader or GoogleFeeds
   
   var _onFinishedCalculatingSimilarities = context.onFinishedCalculatingSimilarities;
   var _onStartedCalculatingSimilarities = context.onStartedCalculatingSimilarities;
@@ -174,6 +182,7 @@ EvenDeeper.Page = function(context) {
       }
       
       if (_currentPageType === null) {      
+        EvenDeeper.debug("wont process this page");
         _onWontProcessThisPage(_this);
         return;
       }
@@ -198,7 +207,8 @@ EvenDeeper.Page = function(context) {
     },
     
     setUnloaded: function() { _unloaded = true; },
-    isUnloaded: function() { return _unloaded; }
+    isUnloaded: function() { return _unloaded; },
+    articleDataSource: function() { return _articleDataSource; }
   };
   
   return _this;
@@ -220,7 +230,7 @@ EvenDeeper.PageTypes = {
   "Generic" : {    
     createArticleFromCurrentPage: function(page) {
       var result = EvenDeeper.ArticleExtractor.findData(page.contextDoc());
-      if (result.body && result.title) {
+      if (result.body) {
         return new EvenDeeper.Article(page, result.sourceName, result.title, result.body, page.contextDoc().location.href);
       } else {
         return null;
@@ -229,7 +239,9 @@ EvenDeeper.PageTypes = {
     
     matchDoc: function(doc) {      
       var regexes = {
-        guardian: /guardian\.co\.uk\/.*\//
+        guardian: /guardian\.co\.uk\/.*\//,
+        testHarness: /deckardsoftware\.com/,
+        testBookmarklet: /test_bookmarklet/
       };
             
       for (var r in regexes) {

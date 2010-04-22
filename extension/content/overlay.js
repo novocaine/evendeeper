@@ -160,9 +160,9 @@ EvenDeeperUI.BrowserController = function(id, browser) {
     
     browser.addEventListener("unload", onUnload, true);
     
-    _page = new EvenDeeper.Page(context);
+    /*_page = new EvenDeeper.Page(context);
     _resultsInPage = new EvenDeeperUI.ResultsInPage(_page);
-    _page.process(context);
+    _page.process();*/
   }
   
   function onPageShow(e) {

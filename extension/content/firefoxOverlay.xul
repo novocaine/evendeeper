@@ -16,7 +16,6 @@
 	<script src="html_parser.js" />
 	<script src="article_extractor.js" />
 	
-	
   <stringbundleset id="stringbundleset">
     <stringbundle id="evendeeper-strings" src="chrome://evendeeper/locale/evendeeper.properties"/>
   </stringbundleset>

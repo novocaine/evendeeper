@@ -5,6 +5,7 @@ EvenDeeper.Article = function(page, source, title, body_div, url) {
   var _updatedBodyCallback = null;
   var _enableUpdatingFromSource = false;
   var _updatedFromSource = false;
+  
   var _bodyDiv = body_div;
   
   var _this = {
@@ -42,10 +43,6 @@ EvenDeeper.Article = function(page, source, title, body_div, url) {
   
   return _this;
 };
-
-EvenDeeper.extractArticleContent = function(page, doc) {
-  
-}
 
 // utility class for calling article update in a loop for all articles
 EvenDeeper.ArticleBodyUpdater = function() {
@@ -97,33 +94,22 @@ EvenDeeper.ArticleStore = function() {
   function hasArticle(url) {
     return _articles.hasOwnProperty(url);
   }
-  
-  function createArticleFromAtom(atom) {
-    var title = atom.elem("title");
-    var body_div = atom.elem("content") || atom.elem("summary");
-
-    if (body_div === null) {
-      body_div = title;
-    }
-  
-    return new EvenDeeper.Article(_page, atom.feed_title(), title.textContent, body_div, atom.url());
-  };
-    
+        
   // google reader announced it has new items; newItems is a flag indicating whether anything's changed
-  function grGotAllItems(newItems) { 
+  function gotAllItems(dataSource, newItems) { 
     EvenDeeper.debug("got items"); 
     
     // only do the article thing if the reader items are new; otherwise 
     // they should already be in the corpus
     if (newItems) {
       // create articles from atoms      
-      var atoms = _googleReader.atoms();      
+      var items = dataSource.loadedItems();      
       // remember which ones are new
       var newArticles = [];
       
-      jQuery.each(atoms, function(i, atom) {
-        if (!hasArticle(atom.url)) {
-          var article = createArticleFromAtom(atoms[i]);
+      jQuery.each(items, function(i, item) {
+        if (!hasArticle(item.url())) {
+          var article = dataSource.createArticleFromItem(items[i]);
           // remember its new, as we're going to update its body
           newArticles.push(article);          
           // actually add it
@@ -153,17 +139,33 @@ EvenDeeper.ArticleStore = function() {
     
     _doneCallback();
   };
-          
+            
   return {        
-    updateArticles: function(page, finishedCallback) {
-      _page = page;
-      _doneCallback = finishedCallback;
-      // get new articles from google reader
-      _googleReader = new EvenDeeper.GoogleReader(page);
-      _googleReader.loadItems(grGotAllItems);      
+    updateArticles: function(options) {
+      _page = options.page;
+      _doneCallback = options.finishedCallback;
+      
+      if (options.dataSource == "GoogleReader") {
+        // get new articles from google reader
+        _googleReader = new EvenDeeper.GoogleReader(_page);
+        _googleReader.loadItems(gotAllItems);      
+      } else if (options.dataSource == "GoogleReaderShared") {        
+        _googleReaderShared = new EvenDeeper.GoogleReaderShared.ArticleLoader(_page);
+        _googleReaderShared.loadFeeds(gotAllItems);
+      } else {
+        throw "Unknown datasource";
+      }
     },
     
-    pastExpiry: function() { return EvenDeeper.GoogleReader.Cache.expired(); },
+    pastExpiry: function(dataSource) { 
+      if (dataSource == "GoogleReader") {
+        return EvenDeeper.GoogleReader.Cache.expired();
+      } else if (dataSource == "GoogleReaderShared") {
+        return true;
+      } else {
+        throw "Unknown datasource";
+      }
+    },
     
     articles: function() { return _articles; },
     

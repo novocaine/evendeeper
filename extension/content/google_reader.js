@@ -158,7 +158,7 @@ EvenDeeper.GoogleReader = function(page) {
     
     function gotAllItems() {
       EvenDeeper.GoogleReader.Cache.cacheAtoms(_atoms);
-      _grGotAllItemsCallback(true);
+      _grGotAllItemsCallback(_this, true);
     }
   };
     
@@ -175,15 +175,26 @@ EvenDeeper.GoogleReader = function(page) {
       } else {
         EvenDeeper.debug("using reader cache");
         _atoms = EvenDeeper.GoogleReader.Cache.getAtoms();
-        _grGotAllItemsCallback(false);
+        _grGotAllItemsCallback(_this, false);
       }      
     },
     
-    atoms: function(articles) { return _atoms; },
+    loadedItems: function() { return _atoms; },
     
     initLogin: function(reader_login, reader_password) {    
       _loginEmail = reader_login;
       _loginPassword = reader_password;
+    },
+    
+    createArticleFromItem: function(atom) {
+      var title = atom.elem("title");
+      var body_div = atom.elem("content") || atom.elem("summary");
+
+      if (body_div === null) {
+        body_div = title;
+      }
+
+      return new EvenDeeper.Article(_page, atom.feed_title(), title.textContent, body_div, atom.url());
     }
   };
   
