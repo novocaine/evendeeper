@@ -4,7 +4,8 @@ EvenDeeper.GoogleReaderShared.Item = function(json_item) {
   return {
     url: function() { return json_item.alternate && json_item.alternate.href; },
     body: function() { return json_item.summary; },
-    title: function() { return json_item.title; }
+    title: function() { return json_item.title; },
+    source: function() { return json_item.origin && json_item.origin.title; }
   };
 };
 
@@ -46,9 +47,8 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
     
     createArticleFromItem: function(item) {
       var bodyDiv = _page.contextDoc().createElement("div");
-      bodyDiv.appendChild(_page.contextDoc().createTextNode(item.body()));
-      
-      return new EvenDeeper.Article(_page, _json.origin && json.origin.title, item.title(), bodyDiv, item.url());
+      bodyDiv.appendChild(_page.contextDoc().createTextNode(item.body()));      
+      return new EvenDeeper.Article(_page, item.source(), item.title(), bodyDiv, item.url());
     },
     
     loadedItems: function() { return _items; }
