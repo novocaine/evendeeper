@@ -212,7 +212,7 @@ EvenDeeper.Similarity = function(_currentDoc, articles, _corpus) {
 
       var end = new Date().getTime();
 
-      dump("similarity time: " + (end - _start) + "\n\n");
+      EvenDeeper.debug("similarity time: " + (end - _start) + "\n\n");
       
       _doneProcessingCallback(_scores);
     } else {

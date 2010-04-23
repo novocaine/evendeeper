@@ -277,7 +277,8 @@ NLP.Debug = function() {
     // },
   	
   	msg: function(msg) {
-  	  dump(msg);
+  	  if (window.dump)
+  	    dump(msg);
   	  // cant use this from worker thread
   	  //Firebug.Console.log(msg);  	  
   	}

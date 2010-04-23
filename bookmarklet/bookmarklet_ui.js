@@ -44,6 +44,8 @@ EvenDeeper.Bookmarklet.UI = function() {
     showResults: function(scores) {
       clearContent();
       
+      var num_articles = 0;
+      
       for (var i=0, len = scores.length; i < len; ++i) {        
         if (scores[i].similarity < 0.1) break;
         
@@ -64,8 +66,17 @@ EvenDeeper.Bookmarklet.UI = function() {
         _content.appendChild(source);
         _content.appendChild(document.createTextNode(" - "));
         _content.appendChild(link);        
-        _content.appendChild(summary);
+        _content.appendChild(summary);      
+        
+        ++num_articles;
+      }
       
+      if (num_articles == 0) {
+        _content.innerHTML = "<p>Sorry, no relevant articles were found.</p>\
+                              <p>EvenDeeper works best on news article pages.\
+                              If you're at an article page already, we just couldn't find any good articles written about the topic.</p>\
+                              <a href='http://evendeeper.deckardsoftware.com/tips'>Get more tips</a>";
+
       }
     },
     

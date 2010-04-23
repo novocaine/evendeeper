@@ -8,10 +8,14 @@ EvenDeeper.debug = function(msg) {
   if (EvenDeeper.debugging_enabled) {
     if (window.hasOwnProperty("Firebug")) {
       Firebug.Console.log(msg);
-    } else {
+    } else if (window.hasOwnProperty("console")) {
       console.log(msg);
     }
   }
+};
+
+EvenDeeper.dateDaysAgo = function(days) {
+  return (new Date().getTime() / 1000).toFixed(0) - 60*60*days*24;
 };
 
 EvenDeeper.errorMsg = function(msg) {
@@ -53,10 +57,10 @@ EvenDeeper.PageProcessor = function() {
   }
       
   function similarityProcessingFinished(sortedArticles) {                
-    dump("**** similarityProcessingFinished\n\n");
+    EvenDeeper.debug("**** similarityProcessingFinished\n\n");
     for (var i=0; i < sortedArticles.length; ++i) {
-      dump(sortedArticles[i].article.title() + "\t" + sortedArticles[i].article.url() + "\t" + sortedArticles[i].similarity + "\n");
-      dump(sortedArticles[i].article.body() + "\n");
+      EvenDeeper.debug(sortedArticles[i].article.title() + "\t" + sortedArticles[i].article.url() + "\t" + sortedArticles[i].similarity + "\n");
+      EvenDeeper.debug(sortedArticles[i].article.body() + "\n");
     }
         
     finishProcessing(sortedArticles);

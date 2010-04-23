@@ -78,7 +78,7 @@ EvenDeeper.GoogleReader = function(page) {
       url = 'http://www.google.com/reader/atom/user/-/label/' + _grLabel + "?n=" + _grItemsPerGet;
     } else {
       // last 3 days
-      url = 'http://www.google.com/reader/atom/user/-/state/com.google/reading-list?r=o&ot=' + ((new Date().getTime() / 1000).toFixed(0) - 60*60*72);
+      url = 'http://www.google.com/reader/atom/user/-/state/com.google/reading-list?r=o&ot=' + (EvenDeeper.dateDaysAgo(3));
     }
     if (continuation) {
       url += "&c=" + continuation;

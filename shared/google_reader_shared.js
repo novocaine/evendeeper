@@ -11,7 +11,7 @@ EvenDeeper.GoogleReaderShared.Item = function(json_item) {
 
 EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
   var _masterUrl = "http://www.google.com/reader/public/javascript/user/16459205132604924828/label/foreign%20policy";
-  var _numArticles = 50;
+  var _numArticles = 500;
   var _page = page;
   var _userCallback = null;
   var _items = [];
@@ -34,14 +34,14 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
   
   var _this = {
     loadFeeds: function(callback) {
-      _userCallback = callback
+      _userCallback = callback;
       EvenDeeper.GoogleReaderShared.articlesLoaded = articlesLoadedCallback;
       
       var doc = _page.contextDoc();
       // use jsonp to instantiate a hash of articles in the global namespace
       var script = doc.createElement("script");
       script.type = "text/javascript";
-      script.src = _masterUrl + "?n=" + _numArticles + "&callback=EvenDeeper.GoogleReaderShared.articlesLoaded";
+      script.src = _masterUrl + "?n=" + _numArticles + "&o=r&ot=" + EvenDeeper.dateDaysAgo(3) + "&callback=EvenDeeper.GoogleReaderShared.articlesLoaded";
       doc.getElementsByTagName("head")[0].appendChild(script);
     },
     
