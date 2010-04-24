@@ -1,9 +1,9 @@
-EvenDeeper.Article = function(page, source, title, body_div, url) {
+EvenDeeper.Article = function(page, source, title, body_div, url, snippet) {
   var _title = title;
   var _url = url;
   var _source = source;
   var _updatedBodyCallback = null;
-  var _enableUpdatingFromSource = false;
+  var _enableUpdatingFromSource = false;//true;
   var _updatedFromSource = false;
   
   var _bodyDiv = body_div;
@@ -14,6 +14,7 @@ EvenDeeper.Article = function(page, source, title, body_div, url) {
     bodyDiv: function() { return _bodyDiv; },
     url: function() { return _url; },
     source: function() { return _source; },
+    snippet: function() { return snippet; },
 
     // given an article with an insigificant body, visits its url to get the full article   
     updateBodyFromSourceIfNecessary: function(page, callback) {

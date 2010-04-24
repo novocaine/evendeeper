@@ -59,8 +59,8 @@ EvenDeeper.Bookmarklet.UI = function() {
         link.href = article.url();
         link.appendChild(document.createTextNode(article.title()));
 
-        var summary = document.createElement("div");
-        summary.appendChild(document.createTextNode(article.body()));
+        var summary = document.createElement("div");      
+        summary.appendChild(document.createTextNode(article.snippet()));
         summary.className = "even-deeper_summary";
                 
         _content.appendChild(source);
