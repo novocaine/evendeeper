@@ -1,12 +1,12 @@
 EvenDeeper.GoogleReaderShared = {};
 
-EvenDeeper.GoogleReaderShared.Item = function(json_item, parent) {
+EvenDeeper.GoogleReaderShared.Item = function(ajax_item, reader_item) {
   return {
-    url: function() { return json_item.link; },
-    body: function() { return json_item.content; },
-    title: function() { return json_item.title; },
-    source: function() { return parent.title.match(/"(.+)"/)[1]; },
-    snippet: function() { return json_item.contentSnippet; }
+    url: function() { return ajax_item.link; },
+    body: function() { return ajax_item.content; },
+    title: function() { return ajax_item.title; },
+    source: function() { return reader_item.origin.title; },
+    snippet: function() { return ajax_item.contentSnippet; }
   };
 };
 
@@ -22,10 +22,8 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
   // only request 100 at a time as that's the maximum that the feed api will return
   var _articleChunkSize = 100;
   var _daysAgo = 3;
-  
-  function articlesLoadedCallback(json) { 
-  }
-  
+  var _readerItems = {};
+    
   function loadedItems() {
     return _items;
   }
@@ -51,9 +49,16 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
   function loadedPublicJSONPCallback(json) {
     EvenDeeper.debug(json);
     
+    // stash the items in readerItems keyed by item url
+    for (var i=0, len = json.items.length; i < len; ++i) {
+      var item = json.items[i];
+      _readerItems[item.alternate.href] = item;
+    }
+        
     if (json.continuation) {
       EvenDeeper.debug("got continuation " + json.continuation + " from jsonp callback");
       _continuations.push(json.continuation);
+            
       loadPublicJSONP(json.continuation);
     } else {
       loadGoogleAjaxFeed();
@@ -76,15 +81,17 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
   }
   
   function loadedGoogleAjaxFeed(json) {
+    EvenDeeper.debug(json);
+    
     // note that what were getting back is from the google feed api at ajax.googleapis.com.
     var items = json.responseData.feed.entries;
 
     EvenDeeper.debug("GoogleReaderShared got " + items.length + " items");
-    EvenDeeper.debug(json);
-
+    
     // add all the items
     for (var i=0, len = items.length; i < len; ++i) {
-      _items.push(new EvenDeeper.GoogleReaderShared.Item(items[i], json.responseData.feed));
+      var reader_item = _readerItems[items[i].link];
+      _items.push(new EvenDeeper.GoogleReaderShared.Item(items[i], reader_item));
     }
     
     // then call for more if there's remaining continuation data    
@@ -126,7 +133,7 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
     
     createArticleFromItem: function(item) {
       var bodyDiv = _page.contextDoc().createElement("div");
-      bodyDiv.innerHTML = item.body();      
+      bodyDiv.innerHTML = item.body();            
       return new EvenDeeper.Article(_page, item.source(), item.title(), bodyDiv, item.url(), item.snippet());
     },
     
