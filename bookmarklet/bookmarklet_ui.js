@@ -7,7 +7,7 @@ EvenDeeper.Bookmarklet.UI = function() {
   function createHolder() {
     // create a floating dialog
     _holder = document.createElement("div");
-    _holder.className = "even-deeper_holder";
+    _holder.id = "even-deeper_holder";
     _holder.style.top = "50px";
 
     var width = (document.width * 0.5);

@@ -3,6 +3,10 @@
 </head>
 <body>
 	<a href="javascript:(function() {
+		if (document.getElementById('even-deeper_holder')) {
+			return;
+		}
+		
 		function addScript(filename) {  
 			var _evendeeper_script = document.createElement('script');
 			_evendeeper_script.type = 'text/javascript';
@@ -16,8 +20,7 @@
 		css.href = 'bookmarklet.css';
 		document.getElementsByTagName('head')[0].appendChild(css);
 		
-		var scripts = [ 'http://www.google.com/jsapi?key=ABQIAAAAQkU7x7-HnBw556W3dfSekRTHn687EzvAr1w13VAxgWGYc-r4rhRHpsfGhBKPSFfoDl_r6b9UL-9K6g',
-										'../shared/nlp.js', '../shared/page.js', '../shared/jquery-132min.js', , '../shared/google_reader_shared.js', 
+		var scripts = [ '../shared/nlp.js', '../shared/page.js', '../shared/jquery-132min.js', , '../shared/google_reader_shared.js', 
 		 								'../shared/article_extractor.js', '../shared/articles.js',
 										'../shared/html_parser.js',
 										'bookmarklet_ui.js', 'bookmarklet.js' ];
