@@ -14,8 +14,6 @@
 #even-deeper_holder h1
 {
   font-size: 12pt;  
-  border-bottom: 1px solid #CCCCCC;
-  padding-bottom: 0.5em;
   margin-top: 0;
 }
 
@@ -32,4 +30,25 @@
 .even-deeper_summary
 {
   margin: 1em 0;
+}
+
+#even-deeper_close
+{
+}
+
+#even-deeper_title_and_close_holder
+{
+  overflow: hidden;
+  border-bottom: 1px solid #CCCCCC;
+  margin-bottom: 0.5em;
+}
+
+#even-deeper_title
+{
+  float: left;
+}
+
+#even-deeper_close
+{
+  float: right;
 }

@@ -16,13 +16,26 @@ EvenDeeper.Bookmarklet.UI = function() {
     _holder.style.left = ((document.width * 0.5) - width * 0.5) + "px";
     _holder.style.display = "none";
     
+    var title_and_close_holder = document.createElement("div");
+    title_and_close_holder.id = "even-deeper_title_and_close_holder";
+            
     var title = document.createElement("h1");
     title.appendChild(document.createTextNode("EvenDeeper"));
-    _holder.appendChild(title);
+    title_and_close_holder.appendChild(title);
+    title.id = "even-deeper_title";
+        
+    var close = document.createElement("a");
+    close.href = "#";
+    close.appendChild(document.createTextNode("Close"));
+    close.onclick = "document.getElementById('even-deeper_holder');";
+    close.id = "even-deeper_close";
+    title_and_close_holder.appendChild(close);
     
+    _holder.appendChild(title_and_close_holder);
+        
     _content = document.createElement("div");
     _holder.appendChild(_content);
-                
+    
     document.body.appendChild(_holder);          
   }
   
