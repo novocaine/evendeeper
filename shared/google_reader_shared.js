@@ -16,6 +16,7 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
   var _publicJsUrl = "http://www.google.com/reader/public/javascript/user/16459205132604924828/label/foreign%20policy";
   var _page = page;
   var _userCallback = null;
+  var _errorCallback = null;
   var _items = [];
   var _json = null;
   var _continuations = [];
@@ -83,17 +84,21 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
   function loadedGoogleAjaxFeed(json) {
     EvenDeeper.debug(json);
     
+    if (!json.responseData) {    
+      _userCallback(_this, true);
+    }
+    
     // note that what were getting back is from the google feed api at ajax.googleapis.com.
     var items = json.responseData.feed.entries;
 
     EvenDeeper.debug("GoogleReaderShared got " + items.length + " items");
-    
+  
     // add all the items
     for (var i=0, len = items.length; i < len; ++i) {
       var reader_item = _readerItems[items[i].link];
       _items.push(new EvenDeeper.GoogleReaderShared.Item(items[i], reader_item));
     }
-    
+  
     // then call for more if there's remaining continuation data    
     if (_continuations.length > 0) {
       var c = _continuations.shift();
