@@ -1,4 +1,0 @@
-content	evendeeper	content/
-locale	evendeeper	en-US	locale/en-US/
-skin	evendeeper	classic/1.0	skin/
-overlay	chrome://browser/content/browser.xul	chrome://evendeeper/content/firefoxOverlay.xul
