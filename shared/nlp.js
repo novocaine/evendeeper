@@ -41,7 +41,15 @@ NLP.Document = function(corpus, text, id) {
 	var _text = text;
 	var _corpus = corpus;
 	var _id = id;
-	
+
+	if (_text === null) {
+		throw "Null text passed to NLP.Document";
+	}
+
+	if (_text === "") {
+		throw "Empty text passed to NLP.Document";
+	}
+
 	// associative array of the frequencies of each word
 	var _wordCounts = null;
 	var _numWords = null;
@@ -66,9 +74,10 @@ NLP.Document = function(corpus, text, id) {
 				_wordCounts = {};					
 				// split document into separate words
 				var words = _text.split(/\s/);
-												
-				jQuery.each(words, function(i, word) {
-					word = word.toLowerCase();
+				
+				var len = words.length;
+				for (var i=0; i < len; ++i) {		
+					var word = words[i].toLowerCase();
 					// remove trailing and leading non-alphanumeric chars
 					word = word.replace(/[^a-z0-9]+$/, "");
 					word = word.replace(/^[^a-z0-9]+/, "");
@@ -83,18 +92,19 @@ NLP.Document = function(corpus, text, id) {
   						_wordCounts[word] = _wordCounts[word] + 1;
   					}
   				}  				
-				});				
+				}				
 
   		  // save number of words
 				_numWords = words.length;
-																			
+												
 				// kill stop words
-				jQuery.each(_stopWords, function(i, stopWord) {
-          if (_wordCounts.hasOwnProperty(stopWord)) {
-            delete _wordCounts[stopWord];
+				var len = _stopWords.length;
+				for (var i=0; i < len; ++i) {
+          if (_wordCounts.hasOwnProperty(_stopWords[i])) {
+            delete _wordCounts[_stopWords[i]];
             --_numWords;
           }
-  		  });
+  		  }
 			}
 			
 			return _wordCounts;
@@ -195,12 +205,14 @@ NLP.Corpus = function() {
 		unionTerms: function() {
 		  if (_unionTerms === null) {
 		    _unionTerms = {};
-		    jQuery.each(_documents, function(i, doc) {		      
-		      var wordCounts = doc.wordCounts();
-		      for (var term in wordCounts) {
-		        _unionTerms[term] = 0;
-		      }
-		    });		    		    
+				for (var key in _documents) {
+					if (_documents.hasOwnProperty(key)) {
+						var wordCounts = _documents[key].wordCounts();
+						for (var term in wordCounts) {
+							_unionTerms[term] = 0;
+						}
+					}
+		    }		    		    
 		  }
 		  
 		  return _unionTerms;
@@ -219,7 +231,6 @@ NLP.Corpus = function() {
 			
 			var unionTerms = this.unionTerms();
 			var delta = 0;			
-			
 			for (var term in unionTerms) {	
 				var tfidf1 = tfidfs1.hasOwnProperty(term) ? tfidfs1[term] : 0;
 				var tfidf2;
@@ -249,9 +260,12 @@ NLP.Corpus = function() {
 		  _unionTerms = null;
 		  _idfs = {};		  
 		  
-		  jQuery.each(_documents, function(id, doc) {
-		    doc.clearTfIdfs();
-		  });
+			var len = _documents.length;
+			for (var key in _documents) {
+				if (_documents.hasOwnProperty(key)) {
+					_documents[key].clearTfIdfs();
+				}
+		  }
 		},
 		
 		getDocument: function(id) {
