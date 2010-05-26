@@ -3,6 +3,7 @@
 </head>
 <body>
 	<a href="javascript:(function() {
+		bookmarkletUrlRoot = 'http://www.deckardsoftware.com/evendeeper/bookmarklet/';
 		if (document.getElementById('even-deeper_holder')) {
 			return;
 		}
@@ -10,22 +11,20 @@
 		function addScript(filename) {  
 			var _evendeeper_script = document.createElement('script');
 			_evendeeper_script.type = 'text/javascript';
-			_evendeeper_script.src = filename;
+			_evendeeper_script.src = bookmarkletUrlRoot + filename;
 			document.getElementsByTagName('head')[0].appendChild(_evendeeper_script);
 		};
 		
-		var css = document.createElement('link');
-		css.rel = 'stylesheet';
-		css.type = 'text/css';
-		css.href = 'bookmarklet.css';
-		document.getElementsByTagName('head')[0].appendChild(css);
-		
-		var scripts = [ '../shared/even_deeper.js', '../shared/nlp.js', '../shared/page.js', '../shared/jquery-131min.js', '../shared/google_reader_shared.js', 
-		 								'../shared/article_extractor.js', '../shared/articles.js',
-										'../shared/html_parser.js',
-										'bookmarklet_ui.js', 'bookmarklet.js' ];
-		
-		for (var i=0; i < scripts.length; ++i) { addScript(scripts[i]); }		
+		function addCss(filename) {
+			var css = document.createElement('link');
+			css.rel = 'stylesheet';
+			css.type = 'text/css';
+			css.href = bookmarkletUrlRoot + 'bookmarklet.css';
+			document.getElementsByTagName('head')[0].appendChild(css);
+		}
+
+		addCss('bookmarklet.css');
+		addScript('evendeeper_bookmarklet.js');
 	})();">Bookmarklet</a>
 	
 	<div id="title">the title</div>
