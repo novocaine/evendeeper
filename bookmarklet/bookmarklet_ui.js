@@ -1,5 +1,3 @@
-EvenDeeper.Bookmarklet = {};
-
 EvenDeeper.Bookmarklet.UI = function() {
   var _holder = null;
   var _content = null;

@@ -10,11 +10,11 @@ EvenDeeper.GoogleReaderShared.Item = function(ajax_item, reader_item) {
   };
 };
 
-EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
+EvenDeeper.GoogleReaderShared.ArticleLoader = function(doc) {
   var _googleAjaxApiUrl = "http://ajax.googleapis.com/ajax/services/feed/load";
   var _publicAtomUrl = "http://www.google.com/reader/public/atom/user%2F16459205132604924828%2Flabel%2Fforeign%20policy";
   var _publicJsUrl = "http://www.google.com/reader/public/javascript/user/16459205132604924828/label/foreign%20policy";
-  var _page = page;
+  var _doc = doc;
   var _userCallback = null;
   var _errorCallback = null;
   var _items = [];
@@ -31,10 +31,10 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
   function loadScript(url) {
     EvenDeeper.debug("loadScript " + url);
     
-    var script = page.contextDoc().createElement("script");
+    var script = doc.createElement("script");
     script.type = "text/javascript";
     script.src = url;
-    page.contextDoc().getElementsByTagName("head")[0].appendChild(script);
+    doc.getElementsByTagName("head")[0].appendChild(script);
   }
   
   function loadPublicJSONP(continuation) {
@@ -129,8 +129,6 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
       EvenDeeper.GoogleReaderShared.loadedGoogleAjaxFeed = loadedGoogleAjaxFeed;
       EvenDeeper.GoogleReaderShared.loadedPublicJSONP = loadedPublicJSONPCallback;
       
-      var doc = _page.contextDoc();
-      
       // approach is
       // 1. load the public feed at public/javascript.. etc repeatedly using the continuation params to
       // generate a list of public feed urls representing all the data
@@ -151,9 +149,9 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
     },
     
     createArticleFromItem: function(item) {
-      var bodyDiv = _page.contextDoc().createElement("div");
+      var bodyDiv = doc.createElement("div");
       bodyDiv.innerHTML = item.body();            
-      return new EvenDeeper.Article(_page, item.source(), item.title(), bodyDiv, item.url(), item.snippet());
+      return new EvenDeeper.Article(item.source(), item.title(), bodyDiv, item.url(), item.snippet());
     },
     
     loadedItems: function() { return _items; }

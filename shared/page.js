@@ -1,26 +1,3 @@
-var EvenDeeper = {};
-
-EvenDeeper.userAgent = 'EvenDeeper_0.1';
-EvenDeeper.debugging_enabled = true;
-
-EvenDeeper.debug = function(msg) { 
-  if (EvenDeeper.debugging_enabled) {
-    if (window.hasOwnProperty("Firebug")) {
-      Firebug.Console.log(msg);
-    } else if (window.hasOwnProperty("console")) {
-      console.log(msg);
-    }
-  }
-};
-
-EvenDeeper.dateDaysAgo = function(days) {
-  return (new Date().getTime() / 1000).toFixed(0) - 60*60*days*24;
-};
-
-EvenDeeper.errorMsg = function(msg) {
-  alert("EvenDeeper: " + msg);
-};
-
 // singleton processor; only allows one process at a time for simplicity - the internals aren't threadsafe
 // or even asynchronously safe in the sense of running multiple pages at the same time.
 
@@ -81,7 +58,18 @@ EvenDeeper.PageProcessor = function() {
       EvenDeeper.corpusInstance.addDocument(_currentDoc);    
     }     
 
-    _similarity = new EvenDeeper.Similarity(_currentDoc, EvenDeeper.ArticleStore.articles(), EvenDeeper.corpusInstance);
+		// convert hash of articles that ArticleStore returns into an array
+
+		var articles = EvenDeeper.ArticleStore.articles();
+		var articlesArray = [];
+
+		for (i in articles) {
+			if (articles.hasOwnProperty(i)) {
+				articlesArray.push(articles[i]);
+			}
+		}    
+
+    _similarity = new EvenDeeper.Similarity(_currentArticle, articlesArray, EvenDeeper.corpusInstance);
     _similarity.run(similarityProcessingFinished);  
   };
   
@@ -237,7 +225,7 @@ EvenDeeper.PageTypes = {
     createArticleFromCurrentPage: function(page) {
       var body = page.contextDoc().getElementById("article-wrapper");
       var title = page.jQueryFn("#article-header h1").text();            
-      return new EvenDeeper.Article(page, "The Guardian", title, body, page.contextDoc().location.href);
+      return new EvenDeeper.Article("The Guardian", title, body, page.contextDoc().location.href);
     },
     
     matchDoc: function(doc) {
@@ -249,7 +237,7 @@ EvenDeeper.PageTypes = {
     createArticleFromCurrentPage: function(page) {
       var result = EvenDeeper.ArticleExtractor.findData(page.contextDoc());
       if (result.body) {
-        return new EvenDeeper.Article(page, result.sourceName, result.title, result.body, page.contextDoc().location.href);
+        return new EvenDeeper.Article(result.sourceName, result.title, result.body, page.contextDoc().location.href);
       } else {
         return null;
       }
