@@ -242,6 +242,8 @@ EvenDeeper.PageTypes = {
     },
     
     matchDoc: function(doc) {      
+			return true;
+			/*
       var regexes = {
         guardian: /guardian\.co\.uk\/.*\//,
         testHarness: /deckardsoftware\.com/,
@@ -254,7 +256,7 @@ EvenDeeper.PageTypes = {
         }
       }
       
-      return false;
+      return false;*/
     }
   }
 };
