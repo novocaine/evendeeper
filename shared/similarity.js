@@ -31,7 +31,12 @@ EvenDeeper.Similarity = function(_currentArticle, _otherArticles, _corpus) {
       var end = new Date().getTime();
 
       EvenDeeper.debug("similarity time: " + (end - _start) + "\n\n");
-      
+     	EvenDeeper.debug("scores:");
+			
+			for (var i=0; i < _scores.length; ++i) {
+				EvenDeeper.debug(_scores[i].article.title() + ":" + _scores[i].similarity);
+			}
+
       _doneProcessingCallback(_scores);
     } else {
       setTimeout(processArticles, 10);
