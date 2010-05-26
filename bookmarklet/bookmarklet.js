@@ -14,6 +14,10 @@ EvenDeeper.Bookmarklet.PageController = function() {
   function onWontProcessThisPage(page) {
     alert("Sorry - EvenDeeper couldn't find a large enough news article in this page to process.");
   }
+
+	function onArticleFetchError() {
+		alert("Sorry - a problem occured fetching similar articles.");
+	}
   
   return {
     init: function() {            
@@ -24,6 +28,7 @@ EvenDeeper.Bookmarklet.PageController = function() {
         articleDataSource: "GoogleReaderShared",
         onFinishedCalculatingSimilarities: onFinishedCalculatingSimilarities,
         onStartedCalculatingSimilarities: onStartedCalculatingSimilarities,
+				onArticleFetchError: onArticleFetchError,
         onWontProcessThisPage: onWontProcessThisPage
       };
       

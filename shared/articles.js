@@ -79,10 +79,11 @@ EvenDeeper.ArticleBodyUpdater = function() {
 EvenDeeper.ArticleStore = function() {
   var _page = null;
   var _doneCallback = null;
+  var _errorCallback = null;
   var _googleReader = null;
   var _articles = {};
   var _max_nlp_considered_chars = 1000;
-    
+
   function addArticle(article) {
     // dont add if we already have an article with this url
     if (hasArticle()) {
@@ -98,8 +99,8 @@ EvenDeeper.ArticleStore = function() {
         
   // google reader announced it has new items; newItems is a flag indicating whether anything's changed
   function gotAllItems(dataSource, newItems) { 
-    EvenDeeper.debug("got items"); 
-    
+    EvenDeeper.debug("ArticleStore.gotAllItems"); 
+
     // only do the article thing if the reader items are new; otherwise 
     // they should already be in the corpus
     if (newItems) {
@@ -145,6 +146,7 @@ EvenDeeper.ArticleStore = function() {
     updateArticles: function(options) {
       _page = options.page;
       _doneCallback = options.finishedCallback;
+			_errorCallback = options.errorCallback;
       
       if (options.dataSource == "GoogleReader") {
         // get new articles from google reader
@@ -152,7 +154,7 @@ EvenDeeper.ArticleStore = function() {
         _googleReader.loadItems(gotAllItems);      
       } else if (options.dataSource == "GoogleReaderShared") {        
         _googleReaderShared = new EvenDeeper.GoogleReaderShared.ArticleLoader(_page);
-        _googleReaderShared.loadFeeds(gotAllItems);
+        _googleReaderShared.loadFeeds(gotAllItems, _errorCallback);
       } else {
         throw "Unknown datasource";
       }
@@ -235,6 +237,8 @@ EvenDeeper.Similarity = function(_currentDoc, articles, _corpus) {
       
       if (_articlesArray.length > 0)
         processArticles();
+			else
+				throw "Empty article array passed to EvenDeeper.Similarity";
     }  
   };
 };

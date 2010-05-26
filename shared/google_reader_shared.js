@@ -24,7 +24,6 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
   var _articleChunkSize = 100;
   var _daysAgo = 3;
   var _readerItems = {};
-    
   function loadedItems() {
     return _items;
   }
@@ -48,22 +47,28 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
   }
   
   function loadedPublicJSONPCallback(json) {
+		EvenDeeper.debug("loadedPublicJSONPCallback");
     EvenDeeper.debug(json);
-    
-    // stash the items in readerItems keyed by item url
-    for (var i=0, len = json.items.length; i < len; ++i) {
-      var item = json.items[i];
-      _readerItems[item.alternate.href] = item;
-    }
-        
-    if (json.continuation) {
-      EvenDeeper.debug("got continuation " + json.continuation + " from jsonp callback");
-      _continuations.push(json.continuation);
-            
-      loadPublicJSONP(json.continuation);
-    } else {
-      loadGoogleAjaxFeed();
-    }
+   
+		if (!json.items) {
+			EvenDeeper.debug("JSONP request failed");
+			_userCallback(_this, true);
+		} else {
+			// stash the items in readerItems keyed by item url
+			for (var i=0, len = json.items.length; i < len; ++i) {
+				var item = json.items[i];
+				_readerItems[item.alternate.href] = item;
+			}
+					
+			if (json.continuation) {
+				EvenDeeper.debug("got continuation " + json.continuation + " from jsonp callback");
+				_continuations.push(json.continuation);
+							
+				loadPublicJSONP(json.continuation);
+			} else {
+				loadGoogleAjaxFeed();
+			}
+		}
   }
   
   function loadGoogleAjaxFeed(continuation) {
@@ -82,36 +87,45 @@ EvenDeeper.GoogleReaderShared.ArticleLoader = function(page) {
   }
   
   function loadedGoogleAjaxFeed(json) {
+		EvenDeeper.debug("loadedGoogleAjaxFeed");
     EvenDeeper.debug(json);
     
     if (!json.responseData) {    
-      _userCallback(_this, true);
-    }
-    
-    // note that what were getting back is from the google feed api at ajax.googleapis.com.
-    var items = json.responseData.feed.entries;
+			EvenDeeper.debug("couldn't find responseData in ajax JSON");
+      _errorCallback(_this);
+    } else { 
+			// note that what were getting back is from the google feed api at ajax.googleapis.com.
+			var items = json.responseData.feed.entries;
 
-    EvenDeeper.debug("GoogleReaderShared got " + items.length + " items");
-  
-    // add all the items
-    for (var i=0, len = items.length; i < len; ++i) {
-      var reader_item = _readerItems[items[i].link];
-      _items.push(new EvenDeeper.GoogleReaderShared.Item(items[i], reader_item));
-    }
-  
-    // then call for more if there's remaining continuation data    
-    if (_continuations.length > 0) {
-      var c = _continuations.shift();
-      loadGoogleAjaxFeed(c);
-    } else {
-      EvenDeeper.debug("GoogleReaderShared finished with " + _items.length + " items");
-      _userCallback(_this, true);    
-    }
-  }
+			EvenDeeper.debug("GoogleReaderShared got " + items.length + " items");
+
+			// add all the items
+			for (var i=0, len = items.length; i < len; ++i) {
+				var reader_item = _readerItems[items[i].link];
+				_items.push(new EvenDeeper.GoogleReaderShared.Item(items[i], reader_item));
+			}
+
+			// then call for more if there's remaining continuation data    
+			if (_continuations.length > 0) {
+				var c = _continuations.shift();
+				loadGoogleAjaxFeed(c);
+			} else {
+				EvenDeeper.debug("GoogleReaderShared finished with " + _items.length + " items");
+				_userCallback(_this, true);    
+			}
+		}
+	}
   
   var _this = {
-    loadFeeds: function(callback) {
-      _userCallback = callback;
+		
+    loadFeeds: function(success_callback, error_callback) {
+			// callback will be called back with params
+			// 1: this object
+			// 2: (bool) whether the feeds were actually updated or whether we pulled from a cache 
+			// (for this object, always true)
+      _userCallback = success_callback;
+			_errorCallback = error_callback;
+
       EvenDeeper.GoogleReaderShared.loadedGoogleAjaxFeed = loadedGoogleAjaxFeed;
       EvenDeeper.GoogleReaderShared.loadedPublicJSONP = loadedPublicJSONPCallback;
       

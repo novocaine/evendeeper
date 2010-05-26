@@ -31,7 +31,7 @@ EvenDeeper.PageProcessor = function() {
   var _this = null;
   var _currentPage = null;
   var _pageQueue = [];
-  
+
   function enQueuePage(page) {
     _pageQueue.push(page);
   }
@@ -66,7 +66,8 @@ EvenDeeper.PageProcessor = function() {
     finishProcessing(sortedArticles);
   };
   
-  function startProcessing() {    
+  function startProcessing() {   
+		EvenDeeper.debug("startProcessing");
     var article = _currentPage.pageArticle();
     
     if (!article)
@@ -85,6 +86,13 @@ EvenDeeper.PageProcessor = function() {
     _similarity.run(similarityProcessingFinished);  
   };
   
+	// indicates the article failed to retreive articles;
+	// we just pass this down the chain to the current page
+	function articleStoreErrorCallback() {
+		EvenDeeper.debug("articleStoreErrorCallback");
+		_currentPage.onArticleFetchError();	
+	};
+
   _this = {
     isBusy: function() { return _busy; },
     
@@ -107,7 +115,8 @@ EvenDeeper.PageProcessor = function() {
         EvenDeeper.ArticleStore.updateArticles({ 
           page: page, 
           finishedCallback: startProcessing,
-          dataSource: page.articleDataSource()
+          dataSource: page.articleDataSource(),
+					errorCallback: articleStoreErrorCallback
         });
         return;
       }
@@ -133,7 +142,8 @@ EvenDeeper.Page = function(context) {
   var _onFinishedCalculatingSimilarities = context.onFinishedCalculatingSimilarities;
   var _onStartedCalculatingSimilarities = context.onStartedCalculatingSimilarities;
   var _onWontProcessThisPage = context.onWontProcessThisPage;
-  
+ 	var _onArticleFetchError = context.onArticleFetchError;
+
   _this = {
     htmlParser: function() {
       if (!_htmlParser) {
@@ -204,7 +214,12 @@ EvenDeeper.Page = function(context) {
     mainThreadInstance: function() { return _mainThreadInstance; },
     contextDoc: function() { return _contextDoc; },
     pageType: function() { return _currentPageType; },
-    
+   
+	  // on* functions called by helper modules to call back the end user
+    onArticleFetchError: function() {
+			_onArticleFetchError();
+		},
+
     onProcessingDone: function(scores) {
       _scores = scores;
       _onFinishedCalculatingSimilarities(_this);    
