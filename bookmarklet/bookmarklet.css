@@ -13,7 +13,9 @@
 
 #even-deeper_holder h1
 {
-  font-size: 12pt;  
+  font-size: 1.8em;  
+	font-family: Serif; 
+	margin-bottom: 0.2em;
   margin-top: 0;
 }
 
