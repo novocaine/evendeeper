@@ -1,4 +1,3 @@
-// secret sauce to get jquery working
 var EvenDeeper = {};
 
 EvenDeeper.userAgent = 'EvenDeeper_0.1';
